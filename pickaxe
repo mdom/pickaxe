@@ -21,6 +21,7 @@ sub list_pages {
 my @pages = list_pages;
 
 initscr;
+refresh; # This is the necessary but undocumented initial refresh
 
 my ( $rows, $columns );
 getmaxyx( $rows, $columns );
@@ -31,7 +32,6 @@ for my $page (@pages) {
     $pad->addstr( $page->{title} . "\n" );
 }
 
-refresh;
 prefresh( $pad, 0, 0, 0, 0, $rows - 1, $columns - 1 );
 getch;
 
