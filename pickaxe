@@ -1,0 +1,14 @@
+#!/usr/bin/perl
+
+use Mojo::Base -strict;
+use Mojo::URL;
+use Mojo::UserAgent;
+use Curses;
+
+my $ua = Mojo::UserAgent->new;
+my $base = Mojo::URL->new('https://redmine.hal.taz.de/projects/');
+$base->query(key => $ENV{REDMINE_ACCESS_TOKEN});
+
+initscr;
+endwin;
+exit 0;
