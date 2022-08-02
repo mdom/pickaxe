@@ -5,10 +5,35 @@ use Mojo::URL;
 use Mojo::UserAgent;
 use Curses;
 
-my $ua = Mojo::UserAgent->new;
-my $base = Mojo::URL->new('https://example.com/projects/');
-$base->query(key => $ENV{REDMINE_ACCESS_TOKEN});
+my $ua   = Mojo::UserAgent->new;
+my $base = Mojo::URL->new('https://example.com/projects/foo/');
+$base->query( key => $ENV{REDMINE_ACCESS_TOKEN} );
+
+sub list_pages {
+    @{
+        $ua->get(
+            $base->clone->path("wiki/index.json") =>
+              { 'Content-Type' => 'application/json' }
+        )->result->json->{wiki_pages}
+    };
+}
+
+my @pages = list_pages;
 
 initscr;
+
+my ( $rows, $columns );
+getmaxyx( $rows, $columns );
+
+my $pad = newpad( scalar @pages, $columns );
+
+for my $page (@pages) {
+    $pad->addstr( $page->{title} . "\n" );
+}
+
+refresh;
+prefresh( $pad, 0, 0, 0, 0, $rows - 1, $columns - 1 );
+getch;
+
 endwin;
 exit 0;
