@@ -4,10 +4,15 @@ use Mojo::Base -strict;
 use Mojo::URL;
 use Mojo::UserAgent;
 use Curses;
+use POSIX 'floor';
 
 my $ua   = Mojo::UserAgent->new;
 my $base = Mojo::URL->new('https://example.com/projects/foo/');
 $base->query( key => $ENV{REDMINE_ACCESS_TOKEN} );
+
+my $pad_index = 0;
+my $selected  = 0;
+my @pages;
 
 sub list_pages {
     @{
@@ -18,22 +23,71 @@ sub list_pages {
     };
 }
 
-my @pages = list_pages;
-
-initscr;
-refresh; # This is the necessary but undocumented initial refresh
-
-my ( $rows, $columns );
-getmaxyx( $rows, $columns );
-
-my $pad = newpad( scalar @pages, $columns );
-
-for my $page (@pages) {
-    $pad->addstr( $page->{title} . "\n" );
+sub selected_page {
+    $pages[ $pad_index + $selected ];
 }
 
-prefresh( $pad, 0, 0, 0, 0, $rows - 1, $columns - 1 );
-getch;
+sub create_pad {
+    my (@pages) = @_;
+    my $pad = newpad( scalar @pages, $COLS );
+    for my $page (@pages) {
+        $pad->addstr( $page->{title} . "\n" );
+    }
+    return $pad;
+}
+
+sub update_pad {
+    my $pad = shift;
+    chgat($pad,$selected,0,-1,A_REVERSE,0,0);
+    my $offset = floor($selected / $LINES) * $LINES;
+    prefresh( $pad, $offset, 0, 0, 0, $LINES - 1, $COLS - 1 );
+    if ( @pages - $offset < $LINES ) {
+        move(@pages - $offset, 0);
+        clrtobot;
+        refresh;
+    }
+}
+
+initscr;
+keypad(stdscr, 1);
+noecho;
+curs_set(0);
+refresh; # This is the necessary but undocumented initial refresh
+
+@pages = list_pages();
+my $pad = create_pad(@pages);
+
+update_pad($pad);
+
+while (1) {
+    my $key = getchar;
+
+    if ( $key eq KEY_DOWN || $key eq 'n' ) {
+        if ( $selected <= @pages - 1 ) {
+            chgat($pad,$selected,0,-1,A_NORMAL,0,0);
+            $selected++;
+        }
+        else {
+            beep;
+        }
+        update_pad($pad);
+    }
+    elsif ( $key eq KEY_UP || $key eq 'p' ) {
+        chgat($pad,$selected,0,-1,A_NORMAL,0,0);
+        if ( $selected - 1 >= 0 ) {
+            $selected--;
+        }
+        else {
+            beep;
+        }
+        update_pad($pad);
+    }
+    elsif ( $key eq KEY_UP || $key eq 'p' ) {
+    }
+    elsif ( $key eq 'q' ) {
+        last;
+    }
+}
 
 endwin;
 exit 0;
