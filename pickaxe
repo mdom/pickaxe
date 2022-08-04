@@ -1,8 +1,10 @@
 #!/usr/bin/perl
 
-use Mojo::Base -strict;
+use Mojo::Base -strict, -signatures;
 use Mojo::URL;
 use Mojo::UserAgent;
+use Mojo::File 'tempfile';
+
 use Curses;
 use POSIX 'floor';
 
@@ -13,6 +15,14 @@ $base->query( key => $ENV{REDMINE_ACCESS_TOKEN} );
 my $pad_index = 0;
 my $selected  = 0;
 my @pages;
+
+sub edit_page ($page) {
+    my $res = $ua->get($base->clone->path("wiki/$page.json") => { 'Content-Type' => 'application/json' })->result;
+    my $text = $res->json->{wiki_page}->{text};
+    my $tempfile = tempfile;
+    $tempfile->spurt($text);
+    system('vim', $tempfile->to_string);
+}
 
 sub list_pages {
     @{
@@ -37,15 +47,14 @@ sub create_pad {
 }
 
 sub update_pad {
-    my $pad = shift;
+    my ($pad, $clear) = @_;
     chgat($pad,$selected,0,-1,A_REVERSE,0,0);
     my $offset = floor($selected / $LINES) * $LINES;
-    prefresh( $pad, $offset, 0, 0, 0, $LINES - 1, $COLS - 1 );
-    if ( @pages - $offset < $LINES ) {
-        move(@pages - $offset, 0);
-        clrtobot;
+    if ( $clear ) {
+        clear;
         refresh;
     }
+    prefresh( $pad, $offset, 0, 0, 0, $LINES - 1, $COLS - 1 );
 }
 
 initscr;
@@ -59,30 +68,59 @@ my $pad = create_pad(@pages);
 
 update_pad($pad);
 
+sub first_item_on_page {
+    my ($selected) = @_;
+     return floor($selected / $LINES) * $LINES;
+}
+
+sub set_selected {
+    my ($pad, $new_value) = @_;
+    my $prev_selected = $selected;
+    $selected = $new_value;
+    if ( $selected < 0 ) {
+        $selected = 0;
+    }
+    elsif ( $selected > @pages - 1 ) {
+        $selected = @pages - 1;
+    }
+    if ( $prev_selected != $selected ) {
+        chgat($pad,$prev_selected,0,-1,A_NORMAL,0,0);
+    }
+    my $clear = first_item_on_page($prev_selected) != first_item_on_page($selected);
+    update_pad($pad, $clear);
+
+}
+
 while (1) {
     my $key = getchar;
 
     if ( $key eq KEY_DOWN || $key eq 'n' ) {
-        if ( $selected <= @pages - 1 ) {
-            chgat($pad,$selected,0,-1,A_NORMAL,0,0);
-            $selected++;
-        }
-        else {
-            beep;
-        }
-        update_pad($pad);
+        set_selected($pad, $selected + 1);
     }
     elsif ( $key eq KEY_UP || $key eq 'p' ) {
-        chgat($pad,$selected,0,-1,A_NORMAL,0,0);
-        if ( $selected - 1 >= 0 ) {
-            $selected--;
+        set_selected($pad, $selected - 1);
+    }
+    elsif ( $key eq KEY_NPAGE || $key eq KEY_RIGHT ) {
+        my $first_item_on_page = floor($selected / $LINES) * $LINES;
+        if ( @pages > $first_item_on_page + $LINES ) {
+            set_selected($pad, $first_item_on_page + $LINES);
         }
         else {
-            beep;
+            set_selected($pad, @pages - 1);
         }
-        update_pad($pad);
     }
-    elsif ( $key eq KEY_UP || $key eq 'p' ) {
+    elsif ( $key eq KEY_PPAGE || $key eq KEY_LEFT ) {
+        if ( $selected - $LINES < 0 ) {
+            set_selected($pad, 0);
+        }
+        else {
+            set_selected($pad, $selected - $LINES);
+        }
+    }
+    elsif ( $key eq 'e' ) {
+        endwin;
+        edit_page($pages[$selected]->{title});
+        update_pad($pad,1);
     }
     elsif ( $key eq 'q' ) {
         last;
