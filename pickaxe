@@ -1,5 +1,10 @@
 #!/usr/bin/perl
 
+# TODO: search
+# TODO: refresh
+# TODO: check http return codes
+# TODO: display success message after uploading
+
 use Mojo::Base -strict, -signatures;
 use Mojo::URL;
 use Mojo::UserAgent;
@@ -33,13 +38,13 @@ sub selected_page {
 sub askyesno ($question) {
     move( $LINES - 1, 0 );
     clrtoeol;
-    addstr( $question . ": " );
+    addstr( $question . " ([yes]/no): " );
     while (1) {
         my $key = getchar;
-        if ( $key eq 'y' or $key eq 'n' ) {
+        if ( $key eq 'y' or $key eq 'n' or $key eq "\n" ) {
             move( $LINES - 1, 0 );
             clrtoeol;
-            if ( $key eq 'y' ) {
+            if ( $key eq 'y' or $key eq "\n" ) {
                 return 1;
             }
             elsif ( $key eq 'n' ) {
@@ -147,7 +152,8 @@ sub next_page {
 }
 
 sub prev_page {
-    my $last_item_on_page = floor( $selected / $list_maxrows ) * $list_maxrows - 1;
+    my $last_item_on_page =
+      floor( $selected / $list_maxrows ) * $list_maxrows - 1;
     if ( $last_item_on_page < 0 ) {
         set_selected( $pad, 0 );
     }
@@ -165,10 +171,15 @@ sub edit_page {
     my $tempfile = tempfile;
     $tempfile->spurt($text);
     system( 'vim', $tempfile->to_string );
-
     update_pad( $pad, 1 );
     update_statusbar;
     update_helpbar;
+
+    if ( askyesno("Save page?") ) {
+        my $text = $tempfile->slurp;
+        $ua->put( $base->clone->path("wiki/$page.json") => json =>
+              { wiki_page => { text => $text } } );
+    }
 }
 
 sub quit {
