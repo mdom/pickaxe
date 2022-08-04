@@ -12,17 +12,10 @@ my $ua   = Mojo::UserAgent->new;
 my $base = Mojo::URL->new('https://example.com/projects/foo/');
 $base->query( key => $ENV{REDMINE_ACCESS_TOKEN} );
 
-my $pad_index = 0;
-my $selected  = 0;
+my $pad_index    = 0;
+my $selected     = 0;
+my $list_maxrows = 0;
 my @pages;
-
-sub edit_page ($page) {
-    my $res = $ua->get($base->clone->path("wiki/$page.json") => { 'Content-Type' => 'application/json' })->result;
-    my $text = $res->json->{wiki_page}->{text};
-    my $tempfile = tempfile;
-    $tempfile->spurt($text);
-    system('vim', $tempfile->to_string);
-}
 
 sub list_pages {
     @{
@@ -37,8 +30,26 @@ sub selected_page {
     $pages[ $pad_index + $selected ];
 }
 
-sub create_pad {
-    my (@pages) = @_;
+sub askyesno ($question) {
+    move( $LINES - 1, 0 );
+    clrtoeol;
+    addstr( $question . ": " );
+    while (1) {
+        my $key = getchar;
+        if ( $key eq 'y' or $key eq 'n' ) {
+            move( $LINES - 1, 0 );
+            clrtoeol;
+            if ( $key eq 'y' ) {
+                return 1;
+            }
+            elsif ( $key eq 'n' ) {
+                return 0;
+            }
+        }
+    }
+}
+
+sub create_pad (@pages) {
     my $pad = newpad( scalar @pages, $COLS );
     for my $page (@pages) {
         $pad->addstr( $page->{title} . "\n" );
@@ -46,37 +57,62 @@ sub create_pad {
     return $pad;
 }
 
-sub update_pad {
-    my ($pad, $clear) = @_;
-    chgat($pad,$selected,0,-1,A_REVERSE,0,0);
-    my $offset = floor($selected / $LINES) * $LINES;
-    if ( $clear ) {
+sub update_helpbar {
+    move( 0, 0 );
+    clrtoeol;
+    attron(A_REVERSE);
+    my $help = "q:Quit e:Edit ?:help";
+    addstr( $help . ( ' ' x ( $COLS - length($help) ) ) );
+    attroff(A_REVERSE);
+    refresh;
+}
+
+sub update_statusbar {
+    move( $LINES - 2, 0 );
+    clrtoeol;
+    attron(A_REVERSE);
+    my $base   = $base->clone->query( key => undef );
+    my $status = "pickaxe: $base";
+    addstr( $status . ( ' ' x ( $COLS - length($status) ) ) );
+    attroff(A_REVERSE);
+    refresh;
+}
+
+sub update_pad ( $pad, $clear ) {
+    chgat( $pad, $selected, 0, -1, A_REVERSE, 0, 0 );
+
+    my $offset = floor( $selected / $list_maxrows ) * $list_maxrows;
+    if ($clear) {
         clear;
+        update_statusbar;
+        update_helpbar;
         refresh;
     }
-    prefresh( $pad, $offset, 0, 0, 0, $LINES - 1, $COLS - 1 );
+    prefresh( $pad, $offset, 0, 1, 0, $LINES - 3, $COLS - 1 );
 }
 
 initscr;
-keypad(stdscr, 1);
+keypad( stdscr, 1 );
 noecho;
 curs_set(0);
-refresh; # This is the necessary but undocumented initial refresh
+refresh;    # This is the necessary but undocumented initial refresh
+
+$list_maxrows = $LINES - 3;
 
 @pages = list_pages();
 my $pad = create_pad(@pages);
 
-update_pad($pad);
+update_pad( $pad, 1 );
+update_statusbar;
+update_helpbar;
 
-sub first_item_on_page {
-    my ($selected) = @_;
-     return floor($selected / $LINES) * $LINES;
+sub first_item_on_page ($selected) {
+    return floor( $selected / $list_maxrows ) * $list_maxrows;
 }
 
-sub set_selected {
-    my ($pad, $new_value) = @_;
+sub set_selected ( $pad, $new ) {
     my $prev_selected = $selected;
-    $selected = $new_value;
+    $selected = $new;
     if ( $selected < 0 ) {
         $selected = 0;
     }
@@ -84,48 +120,106 @@ sub set_selected {
         $selected = @pages - 1;
     }
     if ( $prev_selected != $selected ) {
-        chgat($pad,$prev_selected,0,-1,A_NORMAL,0,0);
+        chgat( $pad, $prev_selected, 0, -1, A_NORMAL, 0, 0 );
     }
-    my $clear = first_item_on_page($prev_selected) != first_item_on_page($selected);
-    update_pad($pad, $clear);
+    my $clear =
+      first_item_on_page($prev_selected) != first_item_on_page($selected);
+    update_pad( $pad, $clear );
 
 }
+
+sub next_item {
+    set_selected( $pad, $selected + 1 );
+}
+
+sub prev_item {
+    set_selected( $pad, $selected - 1 );
+}
+
+sub next_page {
+    my $first_item_on_page = floor( $selected / $list_maxrows ) * $list_maxrows;
+    if ( @pages > $first_item_on_page + $list_maxrows ) {
+        set_selected( $pad, $first_item_on_page + $list_maxrows );
+    }
+    else {
+        set_selected( $pad, @pages - 1 );
+    }
+}
+
+sub prev_page {
+    my $last_item_on_page = floor( $selected / $list_maxrows ) * $list_maxrows - 1;
+    if ( $last_item_on_page < 0 ) {
+        set_selected( $pad, 0 );
+    }
+    else {
+        set_selected( $pad, $last_item_on_page );
+    }
+}
+
+sub edit_page {
+    endwin;
+    my $page = $pages[$selected]->{title};
+    my $res  = $ua->get( $base->clone->path("wiki/$page.json") =>
+          { 'Content-Type' => 'application/json' } )->result;
+    my $text     = $res->json->{wiki_page}->{text};
+    my $tempfile = tempfile;
+    $tempfile->spurt($text);
+    system( 'vim', $tempfile->to_string );
+
+    update_pad( $pad, 1 );
+    update_statusbar;
+    update_helpbar;
+}
+
+sub quit {
+    endwin;
+    exit 0;
+}
+
+sub resize_window {
+    update_pad( $pad, 1 );
+    $list_maxrows = $LINES;
+}
+
+sub display_msg ($msg) {
+    move( $LINES - 1, 0 );
+    clrtoeol;
+    addstr($msg);
+    refresh;
+}
+
+my %bindings = (
+    Curses::KEY_DOWN  => 'next_item',
+    Curses::KEY_UP    => 'prev_item',
+    n                 => 'next_item',
+    p                 => 'prev_item',
+    e                 => 'edit_page',
+    q                 => 'quit',
+    Curses::KEY_NPAGE => 'next_page',
+    Curses::KEY_PPAGE => 'prev_page',
+    Curses::KEY_LEFT  => 'prev_page',
+    Curses::KEY_RIGHT => 'next_page'
+);
 
 while (1) {
     my $key = getchar;
+    display_msg('');
 
-    if ( $key eq KEY_DOWN || $key eq 'n' ) {
-        set_selected($pad, $selected + 1);
-    }
-    elsif ( $key eq KEY_UP || $key eq 'p' ) {
-        set_selected($pad, $selected - 1);
-    }
-    elsif ( $key eq KEY_NPAGE || $key eq KEY_RIGHT ) {
-        my $first_item_on_page = floor($selected / $LINES) * $LINES;
-        if ( @pages > $first_item_on_page + $LINES ) {
-            set_selected($pad, $first_item_on_page + $LINES);
+    if ( my $funcname = $bindings{$key} ) {
+        no strict 'refs';
+        my $func = \&{$funcname};
+        if ( defined $func ) {
+            $func->();
         }
         else {
-            set_selected($pad, @pages - 1);
+            display_msg("Unknown function called.");
         }
+        next;
     }
-    elsif ( $key eq KEY_PPAGE || $key eq KEY_LEFT ) {
-        if ( $selected - $LINES < 0 ) {
-            set_selected($pad, 0);
-        }
-        else {
-            set_selected($pad, $selected - $LINES);
-        }
+    elsif ( $key eq KEY_RESIZE ) {
+        resize_window;
     }
-    elsif ( $key eq 'e' ) {
-        endwin;
-        edit_page($pages[$selected]->{title});
-        update_pad($pad,1);
-    }
-    elsif ( $key eq 'q' ) {
-        last;
+    else {
+        display_msg("Key is not bound.");
     }
 }
-
-endwin;
-exit 0;
