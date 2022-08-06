@@ -1,8 +1,9 @@
 #!/usr/bin/perl
 
-# TODO: refresh
-# TODO: check http return codes
-# TODO: display success message after uploading
+# TODO refresh
+# TODO check http return codes
+# TODO display success message after uploading
+# TODO getline history
 
 use Mojo::Base -strict, -signatures;
 use Mojo::URL;
@@ -14,7 +15,18 @@ use Curses;
 
 my $ua   = Mojo::UserAgent->new;
 my $base = Mojo::URL->new('https://example.com/projects/foo/');
-$base->query( key => $ENV{REDMINE_APIKEY} );
+
+my %getline_bindings = (
+    Curses::KEY_BACKSPACE => 'backward_delete_character',
+    Curses::KEY_LEFT      => 'backward_char',
+    Curses::KEY_RIGHT     => 'forward_char',
+    "\cA"                 => 'beginning_of_line',
+    "\cE"                 => 'end_of_line',
+    "\cD"                 => 'delete_character',
+    "\cK"                 => 'kill_line',
+    "\cG"                 => 'abort',
+    "\n"                  => 'accept_line',
+);
 
 my $pad_index    = 0;
 my $selected     = 0;
@@ -23,14 +35,18 @@ my @pages;
 
 my $buffer = '';
 my $cursor = 0;
+my @history;
 
 sub list_pages {
-    @{
-        $ua->get(
-            $base->clone->path("wiki/index.json") =>
-              { 'Content-Type' => 'application/json' }
-        )->result->json->{wiki_pages}
-    };
+    my $res = eval { $ua->get( $base->clone->path("wiki/index.json") =>
+          { 'Content-Type' => 'application/json' } )->result };
+    if ( $@ ) {
+        endwin; die "Error connection server: " . $@ . "\n"
+    }
+    if ( !$res->is_success ) {
+        endwin; die "Error connection server: " . $res->message . "\n"
+    }
+    return @{ $res->json->{wiki_pages} };
 }
 
 sub selected_page {
@@ -104,14 +120,24 @@ noecho;
 curs_set(0);
 refresh;    # This is the necessary but undocumented initial refresh
 
+update_statusbar;
+update_helpbar;
+
+if ( $ENV{REDMINE_APIKEY} ) {
+    $base->query( key => $ENV{REDMINE_APIKEY} );
+}
+else {
+    my $username = getline("Username: ");
+    my $password = getline("Password: ", { password => 1});
+    $base->userinfo("$username:$password");
+}
+
 $list_maxrows = $LINES - 3;
 
 @pages = list_pages();
 my $pad = create_pad(@pages);
 
 update_pad( $pad, 1 );
-update_statusbar;
-update_helpbar;
 
 sub first_item_on_page ($selected) {
     return int( $selected / $list_maxrows ) * $list_maxrows;
@@ -289,27 +315,19 @@ sub beginning_of_line {
 
 sub end_of_line {
     $cursor = length($buffer);
-    return;
 }
 
 sub kill_line {
     substr( $buffer, $cursor ) = '';
-    return;
 }
 
-my %getline_bindings = (
-    Curses::KEY_BACKSPACE => 'backward_delete_character',
-    Curses::KEY_LEFT      => 'backward_char',
-    Curses::KEY_RIGHT     => 'forward_char',
-    "\cA"                 => 'beginning_of_line',
-    "\cE"                 => 'end_of_line',
-    "\cD"                 => 'delete_character',
-    "\cK"                 => 'kill_line',
-    "\n"                  => 'accept_line',
-    "\cG"                 => 'abort',
-);
+sub add_to_history ($buffer) {
+    if ($buffer ne '' ) {
+        push @history, $buffer;
+    }
+}
 
-sub getline ($prompt) {
+sub getline ($prompt, $options = {}) {
     move( $LINES - 1, 0 );
     $buffer = '';
     $cursor = 0;
@@ -318,26 +336,26 @@ sub getline ($prompt) {
     refresh;
     while (1) {
         my $key = getchar;
-        if ( my $funcname = $getline_bindings{$key} ) {
-            if ( $funcname eq 'accept_line' ) {
-                last;
-            }
-            if ( $funcname eq 'abort' ) {
-                $buffer = '';
-                last;
-            }
-            no strict 'refs';
-            &$funcname();
+        my $funcname = $getline_bindings{$key} || 'self_insert';
+        if ( $funcname eq 'accept_line' ) {
+            last;
         }
-        else {
-            self_insert($key);
+        if ( $funcname eq 'abort' ) {
+            $buffer = '';
+            last;
         }
+        no strict 'refs';
+        &$funcname($key);
+
         move( $LINES - 1, length($prompt) );
         clrtoeol;
         my $rlcols = $COLS - length($prompt) - 1; # -1 extra space for indicator
 
         my $offset = int( $cursor / $rlcols ) * $rlcols;
         my $x      = substr( $buffer, $offset, $rlcols );
+        if ($options->{password} ) {
+            $x = '*' x length($x);
+        }
         addstring($x);
         if ( $offset != 0 ) {
             addstring( $LINES - 1, $COLS - 1, '<' );
