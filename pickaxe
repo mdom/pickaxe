@@ -28,10 +28,10 @@ my %getline_bindings = (
     "\n"                  => 'accept_line',
 );
 
-my $pad_index    = 0;
 my $selected     = 0;
 my $list_maxrows = 0;
 my @pages;
+my $pad;
 
 my $buffer = '';
 my $cursor = 0;
@@ -47,10 +47,6 @@ sub list_pages {
         endwin; die "Error connection server: " . $res->message . "\n"
     }
     return @{ $res->json->{wiki_pages} };
-}
-
-sub selected_page {
-    $pages[ $pad_index + $selected ];
 }
 
 sub askyesno ($question) {
@@ -73,6 +69,9 @@ sub askyesno ($question) {
 }
 
 sub create_pad (@pages) {
+    if (!@pages) {
+        return;
+    }
     my $pad = newpad( scalar @pages, $COLS );
     for my $page (@pages) {
         $pad->addstring( $page->{title} . "\n" );
@@ -101,7 +100,8 @@ sub update_statusbar {
     refresh;
 }
 
-sub update_pad ( $pad, $clear ) {
+sub update_pad ( $clear ) {
+    return if !$pad;
     chgat( $pad, $selected, 0, -1, A_REVERSE, 0, 0 );
 
     my $offset = int( $selected / $list_maxrows ) * $list_maxrows;
@@ -135,15 +135,16 @@ else {
 $list_maxrows = $LINES - 3;
 
 @pages = list_pages();
-my $pad = create_pad(@pages);
+$pad = create_pad(@pages);
 
-update_pad( $pad, 1 );
+update_pad( 1 );
 
 sub first_item_on_page ($selected) {
     return int( $selected / $list_maxrows ) * $list_maxrows;
 }
 
-sub set_selected ( $pad, $new ) {
+sub set_selected ( $new ) {
+    return if !$pad;
     my $prev_selected = $selected;
     $selected = $new;
     if ( $selected < 0 ) {
@@ -157,43 +158,47 @@ sub set_selected ( $pad, $new ) {
     }
     my $clear =
       first_item_on_page($prev_selected) != first_item_on_page($selected);
-    update_pad( $pad, $clear );
+    update_pad( $clear );
 
 }
 
 sub next_item {
-    set_selected( $pad, $selected + 1 );
+    return if !$pad;
+    set_selected( $selected + 1 );
 }
 
 sub prev_item {
-    set_selected( $pad, $selected - 1 );
+    return if !$pad;
+    set_selected( $selected - 1 );
 }
 
 sub next_page {
+    return if !$pad;
     my $first_item_on_page = int( $selected / $list_maxrows ) * $list_maxrows;
     if ( @pages > $first_item_on_page + $list_maxrows ) {
-        set_selected( $pad, $first_item_on_page + $list_maxrows );
+        set_selected( $first_item_on_page + $list_maxrows );
     }
     else {
-        set_selected( $pad, @pages - 1 );
+        set_selected( @pages - 1 );
     }
 }
 
 sub prev_page {
+    return if !$pad;
     my $last_item_on_page =
       int( $selected / $list_maxrows ) * $list_maxrows - 1;
     if ( $last_item_on_page < 0 ) {
-        set_selected( $pad, 0 );
+        set_selected( 0 );
     }
     else {
-        set_selected( $pad, $last_item_on_page );
+        set_selected( $last_item_on_page );
     }
 }
 
 sub display_help {
     endwin;
     system('perldoc', $0);
-    update_pad( $pad, 1 );
+    update_pad( 1 );
     update_statusbar;
     update_helpbar;
 }
@@ -208,7 +213,7 @@ sub edit_page {
     my $tempfile = tempfile;
     $tempfile->spurt( encode( 'utf8', $text ) );
     system( 'vim', $tempfile->to_string );
-    update_pad( $pad, 1 );
+    update_pad( 1 );
     update_statusbar;
     update_helpbar;
 
@@ -223,7 +228,7 @@ sub search {
     my $query = getline("Search for pages matching: ");
     if ( $query eq 'all' ) {
         @pages = list_pages();
-        update_pad( $pad, 1 );
+        update_pad( 1 );
     }
     elsif ( $query eq '' ) {
         display_msg('To view all messages, search for "all".');
@@ -245,10 +250,12 @@ sub search {
             push @found, $pages{ $result->{title} };
         }
         @pages = @found;
-        delwin($pad);
-        $pad      = create_pad(@pages);
+        if ( $pad ) {
+            delwin($pad);
+        }
+        $pad = create_pad(@pages);
         $selected = 0;
-        update_pad( $pad, 1 );
+        update_pad( 1 );
     }
 
 }
@@ -259,7 +266,7 @@ sub quit {
 }
 
 sub resize_window {
-    update_pad( $pad, 1 );
+    update_pad( 1 );
     $list_maxrows = $LINES;
 }
 
