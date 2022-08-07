@@ -4,6 +4,10 @@
 # TODO check http return codes
 # TODO display success message after uploading
 # TODO getline history
+# TODO o - open in browser
+# TODO c - open new wiki/projekt
+# TODO RET - view page
+# TODO projects api
 
 use Mojo::Base -strict, -signatures;
 use Mojo::URL;
