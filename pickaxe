@@ -17,63 +17,52 @@ use Mojo::Util 'decode', 'encode';
 
 use Curses;
 
+use App::pickaxe::Getline 'getline';
+use App::pickaxe::AskYesNo 'askyesno';
+use App::pickaxe::DisplayMsg 'display_msg';
+use App::pickaxe::Pager 'pager';
+use App::pickaxe::Api 'get', 'put';
+
 my $ua   = Mojo::UserAgent->new;
 my $base = Mojo::URL->new('https://redmine.hal.taz.de/projects/taz_wiki_edv/');
-
-my %getline_bindings = (
-    Curses::KEY_BACKSPACE => 'backward_delete_character',
-    Curses::KEY_LEFT      => 'backward_char',
-    Curses::KEY_RIGHT     => 'forward_char',
-    "\cA"                 => 'beginning_of_line',
-    "\cE"                 => 'end_of_line',
-    "\cD"                 => 'delete_character',
-    "\cK"                 => 'kill_line',
-    "\cG"                 => 'abort',
-    "\n"                  => 'accept_line',
-);
 
 my $selected     = 0;
 my $list_maxrows = 0;
 my @pages;
 my $pad;
+my $echobar;
 
-my $buffer = '';
-my $cursor = 0;
-my @history;
+my %bindings = (
+    Curses::KEY_DOWN  => 'next_item',
+    Curses::KEY_UP    => 'prev_item',
+    n                 => 'next_item',
+    p                 => 'prev_item',
+    e                 => 'edit_page',
+    "\n"              => 'view_page',
+    Curses::KEY_NPAGE => 'next_page',
+    Curses::KEY_PPAGE => 'prev_page',
+    Curses::KEY_LEFT  => 'prev_page',
+    Curses::KEY_RIGHT => 'next_page',
+    s                 => 'search',
+    '?'               => 'display_help',
+    q                 => 'quit',
+);
 
 sub list_pages {
-    my $res = eval { $ua->get( $base->clone->path("wiki/index.json") =>
-          { 'Content-Type' => 'application/json' } )->result };
-    if ( $@ ) {
-        endwin; die "Error connection server: " . $@ . "\n"
+    my $res = eval { get( $base->clone->path("wiki/index.json") ) };
+    if ($@) {
+        endwin;
+        die "Error connection server: " . $@ . "\n";
     }
     if ( !$res->is_success ) {
-        endwin; die "Error connection server: " . $res->message . "\n"
+        endwin;
+        die "Error connection server: " . $res->message . "\n";
     }
     return @{ $res->json->{wiki_pages} };
 }
 
-sub askyesno ($question) {
-    move( $LINES - 1, 0 );
-    clrtoeol;
-    addstring( $question . " ([yes]/no): " );
-    while (1) {
-        my $key = getchar;
-        if ( $key eq 'y' or $key eq 'n' or $key eq "\n" ) {
-            move( $LINES - 1, 0 );
-            clrtoeol;
-            if ( $key eq 'y' or $key eq "\n" ) {
-                return 1;
-            }
-            elsif ( $key eq 'n' ) {
-                return 0;
-            }
-        }
-    }
-}
-
 sub create_pad (@pages) {
-    if (!@pages) {
+    if ( !@pages ) {
         return;
     }
     my $pad = newpad( scalar @pages, $COLS );
@@ -104,7 +93,7 @@ sub update_statusbar {
     refresh;
 }
 
-sub update_pad ( $clear ) {
+sub update_pad ($clear) {
     return if !$pad;
     chgat( $pad, $selected, 0, -1, A_REVERSE, 0, 0 );
 
@@ -118,36 +107,57 @@ sub update_pad ( $clear ) {
     prefresh( $pad, $offset, 0, 1, 0, $LINES - 3, $COLS - 1 );
 }
 
-initscr;
-keypad( stdscr, 1 );
-noecho;
-curs_set(0);
-refresh;    # This is the necessary but undocumented initial refresh
+sub main {
 
-update_statusbar;
-update_helpbar;
+    initscr;
+    keypad( stdscr, 1 );
+    noecho;
+    curs_set(0);
+    refresh;    # This is the necessary but undocumented initial refresh
 
-if ( $ENV{REDMINE_APIKEY} ) {
-    $base->query( key => $ENV{REDMINE_APIKEY} );
+    $echobar = subwin( $stdscr, 1, $COLS, $LINES - 1, 0 );
+    update_statusbar;
+    update_helpbar;
+
+    if ( $ENV{REDMINE_APIKEY} ) {
+        $base->query( key => $ENV{REDMINE_APIKEY} );
+    }
+    else {
+        my $username = getline( $echobar, "Username: " );
+        my $password = getline( $echobar, "Password: ", { password => 1 } );
+        $base->userinfo("$username:$password");
+    }
+
+    $list_maxrows = $LINES - 3;
+
+    @pages = list_pages();
+    $pad   = create_pad(@pages);
+
+    update_pad(1);
+
+    while (1) {
+        my $key = getchar;
+        display_msg('');
+
+        if ( my $funcname = $bindings{$key} ) {
+            ## TODO Check if function exists on startup!
+            no strict 'refs';
+            &$funcname();
+        }
+        elsif ( $key eq KEY_RESIZE ) {
+            resize_window();
+        }
+        else {
+            display_msg("Key is not bound.");
+        }
+    }
 }
-else {
-    my $username = getline("Username: ");
-    my $password = getline("Password: ", { password => 1});
-    $base->userinfo("$username:$password");
-}
-
-$list_maxrows = $LINES - 3;
-
-@pages = list_pages();
-$pad = create_pad(@pages);
-
-update_pad( 1 );
 
 sub first_item_on_page ($selected) {
     return int( $selected / $list_maxrows ) * $list_maxrows;
 }
 
-sub set_selected ( $new ) {
+sub set_selected ($new) {
     return if !$pad;
     my $prev_selected = $selected;
     $selected = $new;
@@ -162,8 +172,7 @@ sub set_selected ( $new ) {
     }
     my $clear =
       first_item_on_page($prev_selected) != first_item_on_page($selected);
-    update_pad( $clear );
-
+    update_pad($clear);
 }
 
 sub next_item {
@@ -192,47 +201,68 @@ sub prev_page {
     my $last_item_on_page =
       int( $selected / $list_maxrows ) * $list_maxrows - 1;
     if ( $last_item_on_page < 0 ) {
-        set_selected( 0 );
+        set_selected(0);
     }
     else {
-        set_selected( $last_item_on_page );
+        set_selected($last_item_on_page);
     }
 }
 
 sub display_help {
     endwin;
-    system('perldoc', $0);
-    update_pad( 1 );
+    system( 'perldoc', $0 );
+    update_pad(1);
     update_statusbar;
     update_helpbar;
 }
 
+sub view_page {
+    my $page = $pages[$selected]->{title};
+    my $res  = get( $base->clone->path("wiki/$page.json") );
+    if ( !$res->is_success ) {
+        display_msg( "Can't retrieve $page: " . $res->msg );
+        return;
+    }
+    my $text = $res->json->{wiki_page}->{text};
+    pager($text);
+    update_pad(1);
+    update_statusbar;
+    update_helpbar;
+}
 
 sub edit_page {
     endwin;
     my $page = $pages[$selected]->{title};
-    my $res  = $ua->get( $base->clone->path("wiki/$page.json") =>
-          { 'Content-Type' => 'application/json' } )->result;
+    my $res  = get( $base->clone->path("wiki/$page.json") );
+    if ( !$res->is_success ) {
+        display_msg( "Can't retrieve $page: " . $res->msg );
+        return;
+    }
     my $text     = $res->json->{wiki_page}->{text};
     my $tempfile = tempfile;
     $tempfile->spurt( encode( 'utf8', $text ) );
     system( 'vim', $tempfile->to_string );
-    update_pad( 1 );
+    update_pad(1);
     update_statusbar;
     update_helpbar;
 
-    if ( askyesno("Save page $page?") ) {
-        my $text = decode( 'utf8', $tempfile->slurp );
-        $ua->put( $base->clone->path("wiki/$page.json") => json =>
-              { wiki_page => { text => $text } } );
+    my $new_text = decode( 'utf8', $tempfile->slurp );
+
+    if ( $new_text ne $text ) {
+        if ( askyesno("Save page $page?") ) {
+            put( $base->clone->path("wiki/$page.json"), $text );
+        }
+    }
+    else {
+        display_msg('Discard unmodified page.');
     }
 }
 
 sub search {
-    my $query = getline("Search for pages matching: ");
+    my $query = getline( $echobar, "Search for pages matching: " );
     if ( $query eq 'all' ) {
         @pages = list_pages();
-        update_pad( 1 );
+        update_pad(1);
     }
     elsif ( $query eq '' ) {
         display_msg('To view all messages, search for "all".');
@@ -240,9 +270,7 @@ sub search {
     else {
         my $url = $base->clone->path("search.json");
         $url->query->merge( q => $query, wiki_pages => 1 );
-        my $res =
-          $ua->get( $url => { 'Content-Type' => 'application/json' } )->result;
-        my %pages = map { $_->{title} => $_ } list_pages();
+        my $res = get($url);
         my @found;
         my @results = @{ $res->json->{results} };
         if ( !@results ) {
@@ -254,12 +282,12 @@ sub search {
             push @found, $pages{ $result->{title} };
         }
         @pages = @found;
-        if ( $pad ) {
+        if ($pad) {
             delwin($pad);
         }
-        $pad = create_pad(@pages);
+        $pad      = create_pad(@pages);
         $selected = 0;
-        update_pad( 1 );
+        update_pad(1);
     }
 
 }
@@ -270,136 +298,11 @@ sub quit {
 }
 
 sub resize_window {
-    update_pad( 1 );
+    update_pad(1);
     $list_maxrows = $LINES;
 }
 
-sub display_msg ($msg) {
-    move( $LINES - 1, 0 );
-    clrtoeol;
-    addstring($msg);
-    refresh;
-}
-
-my %bindings = (
-    Curses::KEY_DOWN  => 'next_item',
-    Curses::KEY_UP    => 'prev_item',
-    n                 => 'next_item',
-    p                 => 'prev_item',
-    e                 => 'edit_page',
-    q                 => 'quit',
-    Curses::KEY_NPAGE => 'next_page',
-    Curses::KEY_PPAGE => 'prev_page',
-    Curses::KEY_LEFT  => 'prev_page',
-    Curses::KEY_RIGHT => 'next_page',
-    s                 => 'search',
-    '?'               => 'display_help',
-);
-
-sub delete_character {
-    substr( $buffer, $cursor, 1, '' );
-}
-
-sub backward_delete_character {
-    if ($cursor) {
-        substr( $buffer, $cursor - 1, 1, '' );
-        $cursor--;
-    }
-}
-
-sub self_insert ($key) {
-    substr( $buffer, $cursor, 0, $key );
-    $cursor++;
-}
-
-sub backward_char {
-    $cursor-- if $cursor;
-}
-
-sub forward_char {
-    $cursor++ if $cursor != length($buffer);
-}
-
-sub beginning_of_line {
-    $cursor = 0;
-}
-
-sub end_of_line {
-    $cursor = length($buffer);
-}
-
-sub kill_line {
-    substr( $buffer, $cursor ) = '';
-}
-
-sub add_to_history ($buffer) {
-    if ($buffer ne '' ) {
-        push @history, $buffer;
-    }
-}
-
-sub getline ($prompt, $options = {}) {
-    move( $LINES - 1, 0 );
-    $buffer = '';
-    $cursor = 0;
-    clrtoeol;
-    addstring($prompt);
-    refresh;
-    while (1) {
-        my $key = getchar;
-        my $funcname = $getline_bindings{$key} || 'self_insert';
-        if ( $funcname eq 'accept_line' ) {
-            last;
-        }
-        if ( $funcname eq 'abort' ) {
-            $buffer = '';
-            last;
-        }
-        no strict 'refs';
-        &$funcname($key);
-
-        move( $LINES - 1, length($prompt) );
-        clrtoeol;
-        my $rlcols = $COLS - length($prompt) - 1; # -1 extra space for indicator
-
-        my $offset = int( $cursor / $rlcols ) * $rlcols;
-        my $x      = substr( $buffer, $offset, $rlcols );
-        if ($options->{password} ) {
-            $x = '*' x length($x);
-        }
-        addstring($x);
-        if ( $offset != 0 ) {
-            addstring( $LINES - 1, $COLS - 1, '<' );
-        }
-        elsif ( length($buffer) > $rlcols ) {
-            addstring( $LINES - 1, $COLS - 1, '>' );
-        }
-        chgat( stdscr, $LINES - 1, $cursor + length($prompt) - $offset,
-            1, A_REVERSE, 0, 0 );
-
-        refresh;
-    }
-    move( $LINES - 1, 0 );
-    clrtoeol;
-    return $buffer;
-}
-
-while (1) {
-    my $key = getchar;
-    display_msg('');
-
-    if ( my $funcname = $bindings{$key} ) {
-        ## TODO Check if function exists on startup!
-        no strict 'refs';
-        &$funcname();
-    }
-    elsif ( $key eq KEY_RESIZE ) {
-        resize_window;
-    }
-    else {
-        display_msg("Key is not bound.");
-    }
-}
+main();
 
 __END__
 
