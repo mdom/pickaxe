@@ -18,6 +18,8 @@ has bindings => sub {
     };
 };
 
+has 'index';
+
 has nlines => 0;
 
 has text => '';

@@ -2,11 +2,12 @@ package App::pickaxe::Index;
 use Mojo::Base -signatures, 'App::pickaxe';
 use Curses;
 use App::pickaxe::Pager;
+use App::pickaxe::Wiki;
+use App::pickaxe::Getline 'getline';
+use App::pickaxe::DisplayMsg 'display_msg';
 
-has selected => 0;
-
-has pages => sub {
-    shift->list_pages;
+has 'wiki' => sub {
+    App::pickaxe::Wiki->new( api => shift->api);
 };
 
 has pad => sub {
@@ -42,8 +43,21 @@ has bindings => sub {
     };
 };
 
+sub select ($self, $new) {
+    return if !$self->pad;
+    $self->wiki->select($new);
+
+    if ( $self->wiki->prev_selected != $self->wiki->selected ) {
+        $self->pad->chgat( $self->wiki->prev_selected, 0, -1, A_NORMAL, 0, 0 );
+    }
+    my $clear =
+      $self->first_item_on_page($self->wiki->prev_selected) !=
+      $self->first_item_on_page( $self->wiki->selected );
+    $self->update_pad($clear);
+}
+
 sub create_pad ($self) {
-    my @pages = @{ $self->pages };
+    my @pages = @{ $self->wiki->pages };
     if ( !@pages ) {
         return;
     }
@@ -55,7 +69,7 @@ sub create_pad ($self) {
         my $line        = sprintf(
             "%${len_counter}d %-${len_title}s",
             ( $x + 1 ),
-            $page->{title}
+            $page->{title},
         );
         $pad->addstring( $x, 0, $line );
         $x++;
@@ -63,25 +77,11 @@ sub create_pad ($self) {
     return $pad;
 }
 
-sub list_pages ($self) {
-    my $res =
-      eval { $self->api->get( $self->base->clone->path("wiki/index.json") ) };
-    if ($@) {
-        endwin;
-        die "Error connection server: " . $@ . "\n";
-    }
-    if ( !$res->is_success ) {
-        endwin;
-        die "Error connection server: " . $res->message . "\n";
-    }
-    return $res->json->{wiki_pages};
-}
-
 sub update_pad ( $self, $clear ) {
     return if !$self->pad;
-    $self->pad->chgat( $self->selected, 0, -1, A_REVERSE, 0, 0 );
+    $self->pad->chgat( $self->wiki->selected, 0, -1, A_REVERSE, 0, 0 );
 
-    my $offset = int( $self->selected / $self->maxlines ) * $self->maxlines;
+    my $offset = int( $self->wiki->selected / $self->maxlines ) * $self->maxlines;
     if ($clear) {
         clear;
         $self->update_statusbar;
@@ -92,15 +92,19 @@ sub update_pad ( $self, $clear ) {
 }
 
 sub jump ($self, $key) {
-   my $number = getline("Jump to wiki page: "); 
-   $self->set_selected($number);
+   my $number = getline("Jump to wiki page: ", { buffer => $key }); 
+   if ($number =~ /\D/ ) {
+       display_msg("Argument must be a number.");
+       return;
+   }
+   $self->select($number - 1);
 }
 
 sub view_page ($self, $key) {
-    my $page = $self->pages->[ $self->selected ]->{title};
-    my $res  = $self->api->get( $self->base->clone->path("wiki/$page.json") );
+    my $title = $self->wiki->current_page->{title};
+    my $res  = $self->api->get( "wiki/$title.json" );
     if ( !$res->is_success ) {
-        $self->display_msg( "Can't retrieve $page: " . $res->msg );
+        $self->display_msg( "Can't retrieve $title: " . $res->msg );
         return;
     }
     my $text = $res->json->{wiki_page}->{text};
@@ -113,32 +117,13 @@ sub view_page ($self, $key) {
 sub prev_page ($self, $key) {
     return if !$self->pad;
     my $last_item_on_page =
-      int( $self->selected / $self->maxlines ) * $self->maxlines - 1;
+      int( $self->wiki->selected / $self->maxlines ) * $self->maxlines - 1;
     if ( $last_item_on_page < 0 ) {
-        $self->set_selected(0);
+        $self->select(0);
     }
     else {
-        $self->set_selected($last_item_on_page);
+        $self->select($last_item_on_page);
     }
-}
-
-sub set_selected ( $self, $new ) {
-    return if !$self->pad;
-    my $prev_selected = $self->selected;
-    $self->selected($new);
-    if ( $self->selected < 0 ) {
-        $self->selected(0);
-    }
-    elsif ( $self->selected > @{ $self->pages } - 1 ) {
-        $self->selected( @{ $self->pages } - 1 );
-    }
-    if ( $prev_selected != $self->selected ) {
-        $self->pad->chgat( $prev_selected, 0, -1, A_NORMAL, 0, 0 );
-    }
-    my $clear =
-      $self->first_item_on_page($prev_selected) !=
-      $self->first_item_on_page( $self->selected );
-    $self->update_pad($clear);
 }
 
 sub first_item_on_page ( $self, $selected ) {
@@ -147,39 +132,37 @@ sub first_item_on_page ( $self, $selected ) {
 
 sub next_item ($self, $key) {
     return if !$self->pad;
-    $self->set_selected( $self->selected + 1 );
+    $self->select( $self->wiki->selected + 1 );
 }
 
 sub prev_item ($self, $key) {
     return if !$self->pad;
-    $self->set_selected( $self->selected - 1 );
+    $self->select( $self->wiki->selected - 1 );
 }
 
 sub next_page ($self, $key) {
     return if !$self->pad;
     my $first_item_on_page =
-      int( $self->selected / $self->maxlines ) * $self->maxlines;
-    if ( @{ $self->pages } > $first_item_on_page + $self->maxlines ) {
-        $self->set_selected( $first_item_on_page + $self->maxlines );
+      int( $self->wiki->selected / $self->maxlines ) * $self->maxlines;
+    if ( @{ $self->wiki->pages } > $first_item_on_page + $self->maxlines ) {
+        $self->select( $first_item_on_page + $self->maxlines );
     }
     else {
-        $self->set_selected( @{ $self->pages } - 1 );
+        $self->select( @{ $self->wiki->pages } - 1 );
     }
 }
 
 sub search ($self, $key) {
     my $query = getline("Search for pages matching: ");
     if ( $query eq 'all' ) {
-        $self->pages = self->list_pages;
+        $self->wiki->refresh;
         $self->update_pad(1);
     }
     elsif ( $query eq '' ) {
         $self->display_msg('To view all messages, search for "all".');
     }
     else {
-        my $url = $self->base->clone->path("search.json");
-        $url->query->merge( q => $query, wiki_pages => 1 );
-        my $res     = $self->api->get($url);
+        my $res     = $self->api->get("search.json", q => $query, wiki_pages => 1);
         my @results = @{ $res->json->{results} };
 
         my @found;
@@ -199,7 +182,7 @@ sub search ($self, $key) {
             $self->pad->delwin;
         }
         $self->pad      = self->create_pad;
-        $self->selected = 0;
+        $self->select(0);
         $self->update_pad(1);
     }
 }

@@ -10,14 +10,13 @@ use App::pickaxe::AskYesNo 'askyesno';
 
 has maxlines => sub { $LINES - 3 };
 
-has base => sub {  Mojo::URL->new('https://redmine.hal.taz.de/projects/taz_wiki_edv/') };
+has base_url => sub {  Mojo::URL->new('https://redmine.hal.taz.de/projects/taz_wiki_edv/') };
 
-has api => sub { App::pickaxe::Api->new };
+has api => sub { App::pickaxe::Api->new( base_url => shift->base_url) };
 
-sub edit_page ($self) {
-    endwin;
-    my $page = $self->pages->[$self->selected]->{title};
-    my $res  = $self->api->get( $self->base->clone->path("wiki/$page.json") );
+sub edit_page ($self, $key) {
+    my $page = $self->wiki->current_page->{title};
+    my $res  = $self->api->get( "wiki/$page.json" );
     if ( !$res->is_success ) {
         $self->display_msg( "Can't retrieve $page: " . $res->msg );
         return;
@@ -25,15 +24,16 @@ sub edit_page ($self) {
     my $text     = $res->json->{wiki_page}->{text};
     my $tempfile = tempfile;
     $tempfile->spurt( encode( 'utf8', $text ) );
-    system( 'vim', $tempfile->to_string );
 
+    endwin;
+    system( 'vim', $tempfile->to_string );
     $self->redraw;
 
     my $new_text = decode( 'utf8', $tempfile->slurp );
 
     if ( $new_text ne $text ) {
         if ( askyesno("Save page $page?") ) {
-            $self->api->put( $self->base->clone->path("wiki/$page.json"), $text );
+            $self->api->put( "wiki/$page.json", $text );
         }
     }
     else {
@@ -55,7 +55,7 @@ sub update_statusbar ($self) {
     move( $LINES - 2, 0 );
     clrtoeol;
     attron(A_REVERSE);
-    my $base   = $self->base->clone->query( key => undef );
+    my $base   = $self->base_url->clone->query( key => undef );
     my $status = "pickaxe: $base";
     addstring( $status . ( ' ' x ( $COLS - length($status) ) ) );
     attroff(A_REVERSE);
@@ -97,7 +97,7 @@ sub run ($self) {
 
 sub query_connection_details ($self) {
     if ( $ENV{REDMINE_APIKEY} ) {
-        $self->base->query( key => $ENV{REDMINE_APIKEY} );
+        $self->base_url->query( key => $ENV{REDMINE_APIKEY} );
     }
     else {
         my $username = getline( "Username: " );
