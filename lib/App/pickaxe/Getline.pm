@@ -23,10 +23,12 @@ my @history;
 sub getline ( $prompt, $options = {}) {
     my ($lines, $cols);
     move($LINES - 1, 0 );
-    $buffer = '';
-    $cursor = 0;
+    $buffer = $options->{buffer} || '';
+    $cursor = length($buffer) ;
     clrtoeol;
     addstring($prompt);
+    addstring($buffer);
+    chgat( $LINES - 1, $cursor + length($prompt), 1, A_REVERSE, 0, 0 );
     refresh;
     while (1) {
         my $key = getchar;
@@ -57,7 +59,7 @@ sub getline ( $prompt, $options = {}) {
         elsif ( length($buffer) > $rlcols ) {
             addstring( 0, $COLS - 1, '>' );
         }
-        chgat( 0, $cursor + length($prompt) - $offset, 1, A_REVERSE, 0, 0 );
+        chgat( $LINES - 1, $cursor + length($prompt) - $offset, 1, A_REVERSE, 0, 0 );
 
         refresh;
     }
