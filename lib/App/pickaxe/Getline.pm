@@ -20,15 +20,14 @@ my $buffer = '';
 my $cursor = 0;
 my @history;
 
-sub getline ( $win, $prompt, $options = {}) {
+sub getline ( $prompt, $options = {}) {
     my ($lines, $cols);
-    getmaxyx($win, $lines, $cols);
-    move($win, 0, 0 );
+    move($LINES - 1, 0 );
     $buffer = '';
     $cursor = 0;
     clrtoeol;
-    addstring($win, $prompt);
-    refresh($win);
+    addstring($prompt);
+    refresh;
     while (1) {
         my $key = getchar;
         my $funcname = $getline_bindings{$key} || 'self_insert';
@@ -42,30 +41,30 @@ sub getline ( $win, $prompt, $options = {}) {
         no strict 'refs';
         &$funcname($key);
 
-        move( $win, 0 , length($prompt) );
-        clrtoeol( $win);
-        my $rlcols = $cols - length($prompt) - 1; # -1 extra space for indicator
+        move( $LINES - 1, length($prompt) );
+        clrtoeol;
+        my $rlcols = $COLS - length($prompt) - 1; # -1 extra space for indicator
 
         my $offset = int( $cursor / $rlcols ) * $rlcols;
         my $x      = substr( $buffer, $offset, $rlcols );
         if ($options->{password} ) {
             $x = '*' x length($x);
         }
-        addstring( $win, $x);
+        addstring($x);
         if ( $offset != 0 ) {
-            addstring( $win, 0, $cols - 1, '<' );
+            addstring(0, $COLS - 1, '<' );
         }
         elsif ( length($buffer) > $rlcols ) {
-            addstring( $win, 0, $cols - 1, '>' );
+            addstring( 0, $COLS - 1, '>' );
         }
-        chgat( $win, 0, $cursor + length($prompt) - $offset,
-            1, A_REVERSE, 0, 0 );
+        chgat( 0, $cursor + length($prompt) - $offset, 1, A_REVERSE, 0, 0 );
 
-        refresh($win);
+        refresh;
     }
-    move( $win, 0, 0 );
-    clrtoeol($win);
-    refresh($win);
+    move( $LINES - 1, 0 );
+    clrtoeol;
+    my $subwin = subwin($stdscr, 1, $COLS, $LINES - 1, 0);
+    refresh($subwin);
     return $buffer;
 }
 

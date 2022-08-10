@@ -6,6 +6,7 @@ use Mojo::File 'tempfile';
 use Mojo::Util 'decode', 'encode';
 use App::pickaxe::Api;
 use App::pickaxe::DisplayMsg 'display_msg';
+use App::pickaxe::AskYesNo 'askyesno';
 
 has maxlines => sub { $LINES - 3 };
 
@@ -16,7 +17,7 @@ has api => sub { App::pickaxe::Api->new };
 sub edit_page ($self) {
     endwin;
     my $page = $self->pages->[$self->selected]->{title};
-    my $res  = get( $self->base->clone->path("wiki/$page.json") );
+    my $res  = $self->api->get( $self->base->clone->path("wiki/$page.json") );
     if ( !$res->is_success ) {
         $self->display_msg( "Can't retrieve $page: " . $res->msg );
         return;
@@ -32,7 +33,7 @@ sub edit_page ($self) {
 
     if ( $new_text ne $text ) {
         if ( askyesno("Save page $page?") ) {
-            put( $self->base->clone->path("wiki/$page.json"), $text );
+            $self->api->put( $self->base->clone->path("wiki/$page.json"), $text );
         }
     }
     else {
@@ -83,7 +84,7 @@ sub run ($self) {
                 last;
             }
             ## TODO Check if function exists on startup!
-            $self->$funcname;
+            $self->$funcname($key);
         }
         elsif ( $key eq KEY_RESIZE ) {
             resize_window();

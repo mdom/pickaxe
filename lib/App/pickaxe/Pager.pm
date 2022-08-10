@@ -7,30 +7,29 @@ my $CLEAR = 1;
 
 has bindings => sub {
     return {
-        'q'               => 'quit',
-        Curses::KEY_NPAGE => 'next_page',
-        " "               => 'next_page',
-        Curses::KEY_PPAGE => 'prev_page',
-        Curses::KEY_DOWN  => 'next_line',
-        Curses::KEY_UP    => 'prev_line',
+        'q'                   => 'quit',
+        Curses::KEY_NPAGE     => 'next_page',
+        " "                   => 'next_page',
+        Curses::KEY_PPAGE     => 'prev_page',
+        Curses::KEY_DOWN      => 'next_line',
+        "\n"                  => 'next_line',
+        Curses::KEY_UP        => 'prev_line',
+        Curses::KEY_BACKSPACE => 'prev_line',
     };
 };
 
-my @lines;
-
-has subwin => sub {
-    my $self = shift;
-    return subwin( $stdscr, $self->maxlines, $COLS, 1, 0 );
-};
+has nlines => 0;
 
 has text => '';
 
 has current_line => 0;
 
 has pad => sub {
-    my $self = shift;
-    my $cols = $COLS;
-    @lines = split( "\n", $self->text );
+    my $self  = shift;
+    my $cols  = $COLS;
+    my @lines = split( "\n", $self->text );
+
+    $self->nlines( @lines + 0 );
 
     for my $line (@lines) {
         if ( length($line) > $cols ) {
@@ -54,8 +53,9 @@ sub DESTROY ($self) {
 
 sub redraw ( $self, $clear = 0 ) {
     if ($clear) {
-        clear($self->subwin);
-        refresh($self->subwin);
+        clear;
+        refresh;
+        $self->SUPER::redraw;
     }
     $self->pad->prefresh( $self->current_line, 0, 1, 0, $self->maxlines,
         $COLS - 1 );
@@ -66,26 +66,33 @@ sub set_line ( $self, $new, $clear = 0 ) {
     if ( $self->current_line < 0 ) {
         $self->current_line(0);
     }
-    elsif ( $self->current_line > @lines - 1 ) {
-        $self->current_line( @lines - 1 );
+    elsif ( $self->current_line > $self->nlines - 1 ) {
+        $self->current_line( $self->nlines - 1 );
     }
     $self->redraw($clear);
 }
 
-sub next_line ($self) {
+sub next_line ($self, $key) {
     $self->set_line( $self->current_line + 1 );
 }
 
-sub prev_line ($self) {
+sub prev_line ($self, $key) {
     $self->set_line( $self->current_line - 1 );
 }
 
-sub next_page ($self) {
+sub next_page ($self, $key) {
     $self->set_line( $self->current_line + $self->maxlines, $CLEAR );
 }
 
-sub prev_page ($self) {
+sub prev_page ($self, $key) {
     $self->set_line( $self->current_line - $self->maxlines, $CLEAR );
+}
+
+sub run ($self) {
+    clear;
+    $self->redraw;
+    $self->SUPER::redraw;
+    $self->SUPER::run;
 }
 
 1;

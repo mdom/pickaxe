@@ -25,9 +25,20 @@ has bindings => sub {
         Curses::KEY_PPAGE => 'prev_page',
         Curses::KEY_LEFT  => 'prev_page',
         Curses::KEY_RIGHT => 'next_page',
+        ' '               => 'next_page',
         s                 => 'search',
         '?'               => 'display_help',
         q                 => 'quit',
+        1                 => 'jump',
+        2                 => 'jump',
+        3                 => 'jump',
+        4                 => 'jump',
+        5                 => 'jump',
+        6                 => 'jump',
+        7                 => 'jump',
+        8                 => 'jump',
+        9                 => 'jump',
+        0                 => 'jump',
     };
 };
 
@@ -37,14 +48,24 @@ sub create_pad ($self) {
         return;
     }
     my $pad = newpad( scalar @pages, $COLS );
+    my $x   = 0;
     for my $page (@pages) {
-        $pad->addstring( $page->{title} . "\n" );
+        my $len_counter = length( @pages + 0 );
+        my $len_title   = $COLS - $len_counter;
+        my $line        = sprintf(
+            "%${len_counter}d %-${len_title}s",
+            ( $x + 1 ),
+            $page->{title}
+        );
+        $pad->addstring( $x, 0, $line );
+        $x++;
     }
     return $pad;
 }
 
 sub list_pages ($self) {
-    my $res = eval { $self->api->get( $self->base->clone->path("wiki/index.json") ) };
+    my $res =
+      eval { $self->api->get( $self->base->clone->path("wiki/index.json") ) };
     if ($@) {
         endwin;
         die "Error connection server: " . $@ . "\n";
@@ -70,7 +91,12 @@ sub update_pad ( $self, $clear ) {
     prefresh( $self->pad, $offset, 0, 1, 0, $LINES - 3, $COLS - 1 );
 }
 
-sub view_page ($self) {
+sub jump ($self, $key) {
+   my $number = getline("Jump to wiki page: "); 
+   $self->set_selected($number);
+}
+
+sub view_page ($self, $key) {
     my $page = $self->pages->[ $self->selected ]->{title};
     my $res  = $self->api->get( $self->base->clone->path("wiki/$page.json") );
     if ( !$res->is_success ) {
@@ -84,7 +110,7 @@ sub view_page ($self) {
     $self->update_helpbar;
 }
 
-sub prev_page ($self) {
+sub prev_page ($self, $key) {
     return if !$self->pad;
     my $last_item_on_page =
       int( $self->selected / $self->maxlines ) * $self->maxlines - 1;
@@ -96,39 +122,40 @@ sub prev_page ($self) {
     }
 }
 
-sub set_selected ($self,$new) {
+sub set_selected ( $self, $new ) {
     return if !$self->pad;
     my $prev_selected = $self->selected;
-    $self->selected( $new );
+    $self->selected($new);
     if ( $self->selected < 0 ) {
         $self->selected(0);
     }
-    elsif ( $self->selected > @{$self->pages} - 1 ) {
-        $self->selected(@{$self->pages} - 1);
+    elsif ( $self->selected > @{ $self->pages } - 1 ) {
+        $self->selected( @{ $self->pages } - 1 );
     }
     if ( $prev_selected != $self->selected ) {
         $self->pad->chgat( $prev_selected, 0, -1, A_NORMAL, 0, 0 );
     }
     my $clear =
-      $self->first_item_on_page($prev_selected) != $self->first_item_on_page($self->selected);
+      $self->first_item_on_page($prev_selected) !=
+      $self->first_item_on_page( $self->selected );
     $self->update_pad($clear);
 }
 
-sub first_item_on_page ($self, $selected) {
+sub first_item_on_page ( $self, $selected ) {
     return int( $selected / $self->maxlines ) * $self->maxlines;
 }
 
-sub next_item ($self) {
+sub next_item ($self, $key) {
     return if !$self->pad;
     $self->set_selected( $self->selected + 1 );
 }
 
-sub prev_item ($self) {
+sub prev_item ($self, $key) {
     return if !$self->pad;
     $self->set_selected( $self->selected - 1 );
 }
 
-sub next_page ($self) {
+sub next_page ($self, $key) {
     return if !$self->pad;
     my $first_item_on_page =
       int( $self->selected / $self->maxlines ) * $self->maxlines;
@@ -140,7 +167,7 @@ sub next_page ($self) {
     }
 }
 
-sub search ($self) {
+sub search ($self, $key) {
     my $query = getline("Search for pages matching: ");
     if ( $query eq 'all' ) {
         $self->pages = self->list_pages;
