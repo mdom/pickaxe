@@ -4,15 +4,15 @@ use Curses;
 
 our @EXPORT_OK = 'askyesno';
 
-sub askyesno ( $win, $question ) {
-    move( $win, 0, 0 );
-    clrtoeol($win);
-    addstring( $win, $question . " ([yes]/no): " );
+sub askyesno ( $question ) {
+    move( $LINES - 1, 0 );
+    clrtoeol;
+    addstring( $question . " ([yes]/no): " );
     while (1) {
         my $key = getchar;
         if ( $key eq 'y' or $key eq 'n' or $key eq "\n" ) {
-            move( $win, 0, 0 );
-            clrtoeol($win);
+            move( $LINES - 1, 0 );
+            clrtoeol;
             if ( $key eq 'y' or $key eq "\n" ) {
                 return 1;
             }
