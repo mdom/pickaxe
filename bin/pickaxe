@@ -13,6 +13,8 @@ use Mojo::Base -strict, -signatures;
 use Mojo::UserAgent;
 use App::pickaxe::Index;
 
+our $VERSION = '0.01';
+
 use Curses;
 
 initscr;
@@ -21,9 +23,17 @@ noecho;
 curs_set(0);
 refresh;    # This is the necessary but undocumented initial refresh
 
-App::pickaxe::Index->new->run;
+eval { App::pickaxe::Index->new->run };
+
+my $err;
+if ($@) {
+    $err = $@;
+}
 
 endwin;
+if ( $err ) {
+    warn $err;
+}
 exit 0;
 
 __END__

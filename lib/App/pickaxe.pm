@@ -14,8 +14,12 @@ has base_url => sub {  Mojo::URL->new('https://redmine.hal.taz.de/projects/taz_w
 
 has api => sub { App::pickaxe::Api->new( base_url => shift->base_url) };
 
+has pages => sub ($self) {
+    App::pickaxe::ArrayIterator->new( array => $self->api->pages );
+};
+
 sub edit_page ($self, $key) {
-    my $page = $self->wiki->current_page->{title};
+    my $page = $self->pages->current->{title};
     my $res  = $self->api->get( "wiki/$page.json" );
     if ( !$res->is_success ) {
         $self->display_msg( "Can't retrieve $page: " . $res->msg );
@@ -34,6 +38,10 @@ sub edit_page ($self, $key) {
     if ( $new_text ne $text ) {
         if ( askyesno("Save page $page?") ) {
             $self->api->put( "wiki/$page.json", $text );
+            display_msg('Saved.');
+        }
+        else {
+            display_msg('Not saved.');
         }
     }
     else {
@@ -62,7 +70,7 @@ sub update_statusbar ($self) {
     refresh;
 }
 
-sub display_help ($self) {
+sub display_help ($self, $key) {
     endwin;
     system( 'perldoc', $0 );
     refresh;
