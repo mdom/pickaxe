@@ -8,6 +8,7 @@ my $CLEAR = 1;
 has bindings => sub {
     return {
         'q'                   => 'quit',
+        'e'                   => 'edit_page',
         Curses::KEY_NPAGE     => 'next_page',
         " "                   => 'next_page',
         Curses::KEY_PPAGE     => 'prev_page',
@@ -22,16 +23,20 @@ has 'index';
 
 has nlines => 0;
 
-has text => '';
-
 has current_line => 0;
 
 has pad => sub {
-    my $self  = shift;
+    shift->create_pad;
+};
+
+sub create_pad ( $self ) {
     my $cols  = $COLS;
-    my @lines = split( "\n", $self->text );
+    my $text = $self->api->text_for( $self->pages->current->{title} );
+
+    my @lines = split( "\n", $text );
 
     $self->nlines( @lines + 0 );
+    $self->current_line(0);
 
     for my $line (@lines) {
         if ( length($line) > $cols ) {
@@ -91,6 +96,10 @@ sub prev_page ($self, $key) {
 }
 
 sub run ($self) {
+    if ($self->pad) {
+        $self->pad->delwin;
+    }
+    $self->pad( $self->create_pad );
     clear;
     $self->redraw;
     $self->SUPER::redraw;

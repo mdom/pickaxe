@@ -2,20 +2,22 @@ package App::pickaxe::Index;
 use Mojo::Base -signatures, 'App::pickaxe';
 use Curses;
 use App::pickaxe::Pager;
-use App::pickaxe::Wiki;
 use App::pickaxe::Getline 'getline';
 use App::pickaxe::DisplayMsg 'display_msg';
-
-has 'wiki' => sub {
-    App::pickaxe::Wiki->new( api => shift->api);
-};
+use App::pickaxe::ArrayIterator;
 
 has pad => sub {
     shift->create_pad;
 };
 
+has pager => sub ($self) {
+    App::pickaxe::Pager->new( pages => $self->pages, api => $self->api);
+};
+
 has bindings => sub {
     return {
+        Curses::KEY_END   => 'last_item',
+        Curses::KEY_HOME  => 'first_item',
         Curses::KEY_DOWN  => 'next_item',
         Curses::KEY_UP    => 'prev_item',
         n                 => 'next_item',
@@ -45,26 +47,25 @@ has bindings => sub {
 
 sub select ($self, $new) {
     return if !$self->pad;
-    $self->wiki->select($new);
+    $self->pages->seek($new);
 
-    if ( $self->wiki->prev_selected != $self->wiki->selected ) {
-        $self->pad->chgat( $self->wiki->prev_selected, 0, -1, A_NORMAL, 0, 0 );
+    if ( $self->pages->oldpos != $self->pages->pos ) {
+        $self->pad->chgat( $self->pages->oldpos, 0, -1, A_NORMAL, 0, 0 );
     }
     my $clear =
-      $self->first_item_on_page($self->wiki->prev_selected) !=
-      $self->first_item_on_page( $self->wiki->selected );
+      $self->first_item_on_page($self->pages->oldpos) !=
+      $self->first_item_on_page( $self->pages->pos );
     $self->update_pad($clear);
 }
 
 sub create_pad ($self) {
-    my @pages = @{ $self->wiki->pages };
-    if ( !@pages ) {
+    if ( !$self->pages->count ) {
         return;
     }
-    my $pad = newpad( scalar @pages, $COLS );
+    my $pad = newpad( $self->pages->count, $COLS );
     my $x   = 0;
-    for my $page (@pages) {
-        my $len_counter = length( @pages + 0 );
+    for my $page ($self->pages->each) {
+        my $len_counter = length($self->pages->count);
         my $len_title   = $COLS - $len_counter;
         my $line        = sprintf(
             "%${len_counter}d %-${len_title}s",
@@ -79,9 +80,9 @@ sub create_pad ($self) {
 
 sub update_pad ( $self, $clear ) {
     return if !$self->pad;
-    $self->pad->chgat( $self->wiki->selected, 0, -1, A_REVERSE, 0, 0 );
+    $self->pad->chgat( $self->pages->pos, 0, -1, A_REVERSE, 0, 0 );
 
-    my $offset = int( $self->wiki->selected / $self->maxlines ) * $self->maxlines;
+    my $offset = int( $self->pages->pos / $self->maxlines ) * $self->maxlines;
     if ($clear) {
         clear;
         $self->update_statusbar;
@@ -92,6 +93,7 @@ sub update_pad ( $self, $clear ) {
 }
 
 sub jump ($self, $key) {
+   return if !$self->pad;
    my $number = getline("Jump to wiki page: ", { buffer => $key }); 
    if ($number =~ /\D/ ) {
        display_msg("Argument must be a number.");
@@ -101,14 +103,8 @@ sub jump ($self, $key) {
 }
 
 sub view_page ($self, $key) {
-    my $title = $self->wiki->current_page->{title};
-    my $res  = $self->api->get( "wiki/$title.json" );
-    if ( !$res->is_success ) {
-        $self->display_msg( "Can't retrieve $title: " . $res->msg );
-        return;
-    }
-    my $text = $res->json->{wiki_page}->{text};
-    App::pickaxe::Pager->new( text => $text )->run;
+    return if !$self->pad;
+    $self->pager->run;
     $self->update_pad(1);
     $self->update_statusbar;
     $self->update_helpbar;
@@ -117,7 +113,7 @@ sub view_page ($self, $key) {
 sub prev_page ($self, $key) {
     return if !$self->pad;
     my $last_item_on_page =
-      int( $self->wiki->selected / $self->maxlines ) * $self->maxlines - 1;
+      int( $self->pages->pos / $self->maxlines ) * $self->maxlines - 1;
     if ( $last_item_on_page < 0 ) {
         $self->select(0);
     }
@@ -132,58 +128,61 @@ sub first_item_on_page ( $self, $selected ) {
 
 sub next_item ($self, $key) {
     return if !$self->pad;
-    $self->select( $self->wiki->selected + 1 );
+    $self->select( $self->pages->pos + 1 );
 }
 
 sub prev_item ($self, $key) {
     return if !$self->pad;
-    $self->select( $self->wiki->selected - 1 );
+    $self->select( $self->pages->pos - 1 );
+}
+
+sub first_item ( $self, $key ) {
+    return if !$self->pad;
+    $self->select( 0 );
+}
+
+sub last_item ( $self, $key ) {
+    return if !$self->pad;
+    $self->select( $self->pages->count - 1 );
 }
 
 sub next_page ($self, $key) {
     return if !$self->pad;
     my $first_item_on_page =
-      int( $self->wiki->selected / $self->maxlines ) * $self->maxlines;
-    if ( @{ $self->wiki->pages } > $first_item_on_page + $self->maxlines ) {
+      int( $self->pages->pos / $self->maxlines ) * $self->maxlines;
+    if ( $self->pages->count > $first_item_on_page + $self->maxlines ) {
         $self->select( $first_item_on_page + $self->maxlines );
     }
     else {
-        $self->select( @{ $self->wiki->pages } - 1 );
+        $self->select( $self->pages->count - 1 );
     }
+}
+
+sub set_pages ($self, $pages) {
+    $self->pages( App::pickaxe::ArrayIterator->new( array => $pages ));
+    if ( $self->pad ) {
+        $self->pad->delwin;
+    }
+    $self->pad( $self->create_pad );
+    $self->update_pad(1);
 }
 
 sub search ($self, $key) {
     my $query = getline("Search for pages matching: ");
     if ( $query eq 'all' ) {
-        $self->wiki->refresh;
-        $self->update_pad(1);
+        $self->set_pages( $self->api->pages );
     }
     elsif ( $query eq '' ) {
-        $self->display_msg('To view all messages, search for "all".');
+        display_msg('To view all messages, search for "all".');
     }
     else {
-        my $res     = $self->api->get("search.json", q => $query, wiki_pages => 1);
-        my @results = @{ $res->json->{results} };
+        my $pages = $self->api->search($query);
 
-        my @found;
-        if ( !@results ) {
-            self->display_msg('No matches found.');
+        if ( !$pages ) {
+            display_msg('No matches found.');
             return;
         }
-
-        my %pages = map { $_->{title} => $_ } @{ $self->pages };
-
-        for my $result (@results) {
-            $result->{title} =~ s/^Wiki: //;
-            push @found, $pages{ $result->{title} };
-        }
-        $self->pages = \@found;
-        if ( $self->pad ) {
-            $self->pad->delwin;
-        }
-        $self->pad      = self->create_pad;
-        $self->select(0);
-        $self->update_pad(1);
+        $self->set_pages( $pages );
     }
 }
 
