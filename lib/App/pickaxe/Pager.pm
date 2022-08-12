@@ -1,7 +1,9 @@
 package App::pickaxe::Pager;
-use Mojo::Base -signatures, 'App::pickaxe';
+use Mojo::Base -signatures, 'App::pickaxe::Controller';
 use Curses;
 use App::pickaxe::DisplayMsg 'display_msg';
+use IPC::Cmd 'run_forked';
+use Mojo::Util 'decode', 'encode';
 
 my $CLEAR = 1;
 
@@ -9,6 +11,7 @@ has bindings => sub {
     return {
         'q'                   => 'quit',
         'e'                   => 'edit_page',
+        'n'                   => 'create_page',
         Curses::KEY_NPAGE     => 'next_page',
         " "                   => 'next_page',
         Curses::KEY_PPAGE     => 'prev_page',
@@ -16,22 +19,40 @@ has bindings => sub {
         "\n"                  => 'next_line',
         Curses::KEY_UP        => 'prev_line',
         Curses::KEY_BACKSPACE => 'prev_line',
+        '%'                   => 'toggle_filter_mode',
     };
 };
 
 has 'index';
 
+has filter_mode => 0;
+
+has filter => sub { ['pandoc', '-f', 'textile', '-t', 'plain' ] };
+
 has nlines => 0;
 
 has current_line => 0;
 
-has pad => sub {
-    shift->create_pad;
-};
+has 'pad';
+
+sub edit_page ( $self, $key ) {
+    $self->SUPER::edit_page($key);
+    $self->create_pad;
+    $self->redraw(1);
+}
 
 sub create_pad ( $self ) {
+    if ($self->pad) {
+        $self->pad->delwin;
+    }
     my $cols  = $COLS;
     my $text = $self->api->text_for( $self->pages->current->{title} );
+
+    if ($self->filter_mode) {
+        $text = encode('utf8', $text);
+        my $result = run_forked($self->filter, { child_stdin => $text });
+        $text = decode('utf8', $result->{stdout});
+    }
 
     my @lines = split( "\n", $text );
 
@@ -51,7 +72,7 @@ sub create_pad ( $self ) {
         addstring( $pad, $x, 0, $line ) or die "addstring: $line\n";
         $x++;
     }
-    return $pad;
+    $self->pad( $pad );
 };
 
 sub DESTROY ($self) {
@@ -79,6 +100,18 @@ sub set_line ( $self, $new, $clear = 0 ) {
     $self->redraw($clear);
 }
 
+sub toggle_filter_mode ($self, $key) {
+    $self->filter_mode( !$self->filter_mode );
+    $self->create_pad;
+    $self->redraw(1);
+    if ( $self->filter_mode ) {
+        display_msg('Filter mode enabled.');
+    }
+    else {
+        display_msg('Filter mode disabled.');
+    }
+}
+
 sub next_line ($self, $key) {
     $self->set_line( $self->current_line + 1 );
 }
@@ -96,10 +129,7 @@ sub prev_page ($self, $key) {
 }
 
 sub run ($self) {
-    if ($self->pad) {
-        $self->pad->delwin;
-    }
-    $self->pad( $self->create_pad );
+    $self->create_pad;
     clear;
     $self->redraw;
     $self->SUPER::redraw;

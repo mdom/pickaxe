@@ -1,17 +1,15 @@
 #!/usr/bin/perl
 
-# TODO refresh
 # TODO check http return codes
-# TODO display success message after uploading
 # TODO getline history
-# TODO o - open in browser
 # TODO c - open new wiki/projekt
-# TODO RET - view page
-# TODO projects api
+# TODO diff edit with conflicting pages
+# TODO config
 
 use Mojo::Base -strict, -signatures;
 use Mojo::UserAgent;
 use App::pickaxe::Index;
+use App::pickaxe::State;
 
 our $VERSION = '0.01';
 
@@ -23,7 +21,7 @@ noecho;
 curs_set(0);
 refresh;    # This is the necessary but undocumented initial refresh
 
-eval { App::pickaxe::Index->new->run };
+eval { App::pickaxe::Index->new( state => App::pickaxe::State->new() )->run };
 
 my $err;
 if ($@) {
@@ -31,7 +29,7 @@ if ($@) {
 }
 
 endwin;
-if ( $err ) {
+if ($err) {
     warn $err;
 }
 exit 0;

@@ -1,17 +1,19 @@
 package App::pickaxe::Index;
-use Mojo::Base -signatures, 'App::pickaxe';
+use Mojo::Base -signatures, 'App::pickaxe::Controller';
 use Curses;
 use App::pickaxe::Pager;
+use App::pickaxe::ArrayIterator;
 use App::pickaxe::Getline 'getline';
 use App::pickaxe::DisplayMsg 'display_msg';
-use App::pickaxe::ArrayIterator;
+use Mojo::Date;
+use POSIX 'strftime';
 
 has pad => sub {
     shift->create_pad;
 };
 
 has pager => sub ($self) {
-    App::pickaxe::Pager->new( pages => $self->pages, api => $self->api);
+    App::pickaxe::Pager->new( state => $self->state )->run;
 };
 
 has bindings => sub {
@@ -20,9 +22,11 @@ has bindings => sub {
         Curses::KEY_HOME  => 'first_item',
         Curses::KEY_DOWN  => 'next_item',
         Curses::KEY_UP    => 'prev_item',
-        n                 => 'next_item',
-        p                 => 'prev_item',
+        j                 => 'next_item',
+        k                 => 'prev_item',
         e                 => 'edit_page',
+        n                 => 'create_page',
+        o                 => 'open_in_browser',
         "\n"              => 'view_page',
         Curses::KEY_NPAGE => 'next_page',
         Curses::KEY_PPAGE => 'prev_page',
@@ -31,6 +35,7 @@ has bindings => sub {
         ' '               => 'next_page',
         s                 => 'search',
         '?'               => 'display_help',
+        '$'               => 'update_pages',
         q                 => 'quit',
         1                 => 'jump',
         2                 => 'jump',
@@ -45,33 +50,40 @@ has bindings => sub {
     };
 };
 
-sub select ($self, $new) {
+sub select ( $self, $new ) {
     return if !$self->pad;
-    $self->pages->seek($new);
+    my $pages = $self->state->pages;
+    $pages->seek($new);
 
-    if ( $self->pages->oldpos != $self->pages->pos ) {
-        $self->pad->chgat( $self->pages->oldpos, 0, -1, A_NORMAL, 0, 0 );
+    if ( $pages->oldpos != $pages->pos ) {
+        $self->pad->chgat( $pages->oldpos, 0, -1, A_NORMAL, 0, 0 );
     }
     my $clear =
-      $self->first_item_on_page($self->pages->oldpos) !=
-      $self->first_item_on_page( $self->pages->pos );
+      $self->first_item_on_page( $pages->oldpos ) !=
+      $self->first_item_on_page( $pages->pos );
     $self->update_pad($clear);
 }
 
 sub create_pad ($self) {
-    if ( !$self->pages->count ) {
+    my $pages = $self->state->pages;
+    if ( !$pages->count ) {
         return;
     }
-    my $pad = newpad( $self->pages->count, $COLS );
+
+    my $pad = newpad( $pages->count, $COLS );
     my $x   = 0;
-    for my $page ($self->pages->each) {
-        my $len_counter = length($self->pages->count);
-        my $len_title   = $COLS - $len_counter;
+    for my $page ( $pages->each ) {
+        my $len_counter = length( $pages->count );
         my $line        = sprintf(
-            "%${len_counter}d %-${len_title}s",
+            "%${len_counter}d   %s   %-s",
             ( $x + 1 ),
+            strftime(
+                "%Y-%m-%d %H:%M:%S",
+                gmtime Mojo::Date->new( $page->{updated_on} )->epoch
+            ),
             $page->{title},
         );
+        $line = substr( $line, 0, $COLS - 1 );
         $pad->addstring( $x, 0, $line );
         $x++;
     }
@@ -80,9 +92,10 @@ sub create_pad ($self) {
 
 sub update_pad ( $self, $clear ) {
     return if !$self->pad;
-    $self->pad->chgat( $self->pages->pos, 0, -1, A_REVERSE, 0, 0 );
+    my $pages = $self->state->pages;
+    $self->pad->chgat( $pages->pos, 0, -1, A_REVERSE, 0, 0 );
 
-    my $offset = int( $self->pages->pos / $self->maxlines ) * $self->maxlines;
+    my $offset = int( $pages->pos / $self->maxlines ) * $self->maxlines;
     if ($clear) {
         clear;
         $self->update_statusbar;
@@ -92,17 +105,22 @@ sub update_pad ( $self, $clear ) {
     prefresh( $self->pad, $offset, 0, 1, 0, $LINES - 3, $COLS - 1 );
 }
 
-sub jump ($self, $key) {
-   return if !$self->pad;
-   my $number = getline("Jump to wiki page: ", { buffer => $key }); 
-   if ($number =~ /\D/ ) {
-       display_msg("Argument must be a number.");
-       return;
-   }
-   $self->select($number - 1);
+sub update_pages ( $self, $key ) {
+    $self->set_pages( $self->api->pages );
+    display_msg("Updated.");
 }
 
-sub view_page ($self, $key) {
+sub jump ( $self, $key ) {
+    return if !$self->pad;
+    my $number = getline( "Jump to wiki page: ", { buffer => $key } );
+    if ( $number =~ /\D/ ) {
+        display_msg("Argument must be a number.");
+        return;
+    }
+    $self->select( $number - 1 );
+}
+
+sub view_page ( $self, $key ) {
     return if !$self->pad;
     $self->pager->run;
     $self->update_pad(1);
@@ -110,10 +128,11 @@ sub view_page ($self, $key) {
     $self->update_helpbar;
 }
 
-sub prev_page ($self, $key) {
+sub prev_page ( $self, $key ) {
     return if !$self->pad;
+    my $pages = $self->state->pages;
     my $last_item_on_page =
-      int( $self->pages->pos / $self->maxlines ) * $self->maxlines - 1;
+      int( $pages->pos / $self->maxlines ) * $self->maxlines - 1;
     if ( $last_item_on_page < 0 ) {
         $self->select(0);
     }
@@ -126,27 +145,27 @@ sub first_item_on_page ( $self, $selected ) {
     return int( $selected / $self->maxlines ) * $self->maxlines;
 }
 
-sub next_item ($self, $key) {
+sub next_item ( $self, $key ) {
     return if !$self->pad;
-    $self->select( $self->pages->pos + 1 );
+    $self->select( $self->state->pages->pos + 1 );
 }
 
-sub prev_item ($self, $key) {
+sub prev_item ( $self, $key ) {
     return if !$self->pad;
-    $self->select( $self->pages->pos - 1 );
+    $self->select( $self->state->pages->pos - 1 );
 }
 
 sub first_item ( $self, $key ) {
     return if !$self->pad;
-    $self->select( 0 );
+    $self->select(0);
 }
 
 sub last_item ( $self, $key ) {
     return if !$self->pad;
-    $self->select( $self->pages->count - 1 );
+    $self->select( $self->state->pages->count - 1 );
 }
 
-sub next_page ($self, $key) {
+sub next_page ( $self, $key ) {
     return if !$self->pad;
     my $first_item_on_page =
       int( $self->pages->pos / $self->maxlines ) * $self->maxlines;
@@ -158,8 +177,15 @@ sub next_page ($self, $key) {
     }
 }
 
-sub set_pages ($self, $pages) {
-    $self->pages( App::pickaxe::ArrayIterator->new( array => $pages ));
+has 'order' => 'revdate';
+
+sub set_pages ( $self, $pages ) {
+
+    if ( $self->order eq 'revdate' ) {
+        $pages = [ sort { $b->{updated_on} cmp $a->{updated_on} } @$pages ];
+    }
+
+    $self->state->pages( App::pickaxe::ArrayIterator->new( $pages ));
     if ( $self->pad ) {
         $self->pad->delwin;
     }
@@ -167,7 +193,7 @@ sub set_pages ($self, $pages) {
     $self->update_pad(1);
 }
 
-sub search ($self, $key) {
+sub search ( $self, $key ) {
     my $query = getline("Search for pages matching: ");
     if ( $query eq 'all' ) {
         $self->set_pages( $self->api->pages );
@@ -182,13 +208,15 @@ sub search ($self, $key) {
             display_msg('No matches found.');
             return;
         }
-        $self->set_pages( $pages );
+        $self->set_pages($pages);
+        display_msg('To view all messages, search for "all".');
     }
 }
 
 sub run ($self) {
+    $self->SUPER::redraw;
     $self->query_connection_details;
-    $self->update_pad(1);
+    $self->set_pages( $self->api->pages );
     $self->SUPER::run;
 }
 
