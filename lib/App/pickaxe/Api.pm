@@ -26,6 +26,12 @@ sub get ( $self, $path, %parameters ) {
     return $res;
 }
 
+sub url_for ( $self, $title ) {
+    my $url = $self->base_url->clone->path("wiki/$title");
+    $url->query( key => undef );
+    return $url->to_string;
+}
+
 sub text_for ( $self, $title ) {
     $self->get("wiki/$title.json")->json->{wiki_page}->{text};
 }
@@ -45,6 +51,14 @@ sub pages ($self) {
     $self->get("wiki/index.json")->json->{wiki_pages};
 }
 
+sub save ( $self, $title, $text ) {
+    $self->put( "wiki/$title.json", $text );
+}
+
+sub page ( $self, $title ) {
+    $self->get("wiki/$title.json");
+}
+
 sub search ( $self, $query ) {
     my $res = $self->get(
         "search.json",
@@ -53,19 +67,32 @@ sub search ( $self, $query ) {
         limit      => 100,
         offset     => 0
     );
-    my $result  = $res->json;
-    my @results = @{ $res->json->{results} };
+    return if !$res->is_success;
+    my $data           = $res->json;
+    my @matching_pages = @{ $data->{results} };
 
-    return if !@results;
+    return if !@matching_pages;
+
+    my $total_count = $data->{total_count};
+    my $offset      = $data->{offset};
+    while ( $total_count != @matching_pages ) {
+        my $res = $self->get(
+            "search.json",
+            q          => $query,
+            wiki_pages => 1,
+            limit      => 100,
+            offset     => $offset + 100,
+        );
+        return if !$res->is_success;
+        my $data = $res->json;
+        $offset = $data->{offset};
+        push @matching_pages, @{ $data->{results} };
+    }
 
     my %pages = map { $_->{title} => $_ } @{ $self->pages };
-
-    my @found;
-    for my $result (@results) {
-        $result->{title} =~ s/^Wiki: //;
-        push @found, $pages{ $result->{title} };
-    }
-    return \@found;
+    @matching_pages =
+      map { $pages{ $_->{title} =~ s/^Wiki: //r } } @matching_pages;
+    return \@matching_pages;
 }
 
 1;
