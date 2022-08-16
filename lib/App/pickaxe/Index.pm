@@ -5,17 +5,15 @@ use App::pickaxe::Pager;
 use App::pickaxe::ArrayIterator;
 use App::pickaxe::Getline 'getline';
 use App::pickaxe::DisplayMsg 'display_msg';
-use Mojo::Date;
-use Mojo::Template;
 use POSIX 'strftime';
 
-has pad => sub {
-    shift->create_pad;
-};
+has 'pad';
 
 has pager => sub ($self) {
     App::pickaxe::Pager->new( state => $self->state );
 };
+
+has help_summary => "q:Quit w:New e:Edit s:Search /:find o:Open ?:help";
 
 has bindings => sub {
     return {
@@ -55,7 +53,12 @@ has bindings => sub {
 };
 
 has index_time_format => "%Y-%m-%d %H:%M:%S";
-has index_format      => '%n %u   %t';
+has index_format      => '%4n %-22u %t';
+
+sub status ($self) {
+    my $base = $self->state->base_url->clone->query( key => undef );
+    return "pickaxe: $base";
+}
 
 sub select ( $self, $new ) {
     return if !$self->pad;
@@ -71,42 +74,51 @@ sub select ( $self, $new ) {
     $self->update_pad($clear);
 }
 
-sub printf ( $self, $page ) {
-    my $fmt = $self->index_format;
+sub format_time ( $self, $time ) {
     my $strftime_fmt = $self->index_time_format;
+    my $redmine_fmt  = '%Y-%m-%dT%H:%M:%SZ';
 
-    my $formatted = '';
+    # return gmtime->strptime( $time, $redmine_fmt )->strftime($strftime_fmt);
+    ## This is a microoptimation of the above statement.
+    my ( $year, $mon, $mday, $hour, $min, $sec ) = split( /[:TZ-]/, $time );
+    $mon  -= 1;
+    $year -= 1900;
+    strftime( $strftime_fmt, $sec, $min, $hour, $mday, $mon, $year );
+}
+
+sub compile_index_format ($self) {
+    my $index_fmt = $self->index_format;
+
+    my $fmt = '';
+    my @args;
+
+    my %identifier = (
+        n => [ d => sub { $_[0]->{index} + 1 } ],
+        t => [ s => sub { $_[0]->{title} } ],
+        u => [ s => sub { $self->format_time( $_[0]->{'updated_on'} ) } ],
+        c => [ s => sub { $self->format_time( $_[0]->{'created_on'} ) } ],
+    );
+
     while (1) {
-        if ( $fmt =~ /\G%([a-zA-Z])/gc ) {
-            my ($format) = ($1);
-            if ( $format eq 'n' ) {
-                $formatted .= sprintf( "%4s", $page->{index} + 1 );
-            }
-            elsif ( $format eq 'u' ) {
-                $formatted .= strftime( $strftime_fmt,
-                    gmtime Mojo::Date->new( $page->{updated_on} )->epoch ),
-                  ;
-            }
-            elsif ( $format eq 'c' ) {
-                $formatted .= strftime( $strftime_fmt,
-                    gmtime Mojo::Date->new( $page->{created_on} )->epoch ),
-                  ;
-            }
-            elsif ( $format eq 't' ) {
-                $formatted .= $page->{title};
+        if ( $index_fmt =~ /\G%(-?\d+(?:.\d)?)?([a-zA-Z])/gc ) {
+            my ( $mod, $format ) = ( $1, $2 );
+            $mod //= '';
+            if ( my $i = $identifier{$format} ) {
+                $fmt .= "%$mod" . $i->[0];
+                push @args, $i->[1];
             }
             else {
                 die "Unknown format specifier <$format>\n";
             }
         }
-        elsif ( $fmt =~ /\G([^%]+)/gc ) {
-            $formatted .= $1;
+        elsif ( $index_fmt =~ /\G([^%]+)/gc ) {
+            $fmt .= $1;
         }
-        elsif ( $fmt =~ /\G$/gc ) {
+        elsif ( $index_fmt =~ /\G$/gc ) {
             last;
         }
     }
-    return $formatted;
+    return $fmt, @args;
 }
 
 sub create_pad ($self) {
@@ -117,9 +129,11 @@ sub create_pad ($self) {
 
     my $pad = newpad( $pages->count, $COLS );
     my $x   = 0;
+    my ( $fmt, @args ) = $self->compile_index_format;
     for my $page ( $pages->each ) {
         $page->{index} = $x;
-        my $line = $self->printf($page);
+
+        my $line = sprintf( $fmt, map { $page->$_ } @args );
         $line = substr( $line, 0, $COLS - 1 );
         $pad->addstring( $x, 0, $line );
         $x++;
@@ -151,18 +165,18 @@ has 'needle';
 
 sub find_next ( $self, $key ) {
     display_msg "There are no pages." if !$self->pad;
-    if (!$self->needle) {
-        my $needle = getline( "Find title: " );
+    if ( !$self->needle ) {
+        my $needle = getline("Find title: ");
         return if !$needle;
         $needle = lc($needle);
         $self->needle($needle);
     }
     my $needle = $self->needle;
-    my @pages = $self->pages->each;
-    my $pos = $self->pages->pos;
-    for my $i ($pos+1 .. @pages-1, 0 .. $pos -1 ) {
+    my @pages  = $self->pages->each;
+    my $pos    = $self->pages->pos;
+    for my $i ( $pos + 1 .. @pages - 1, 0 .. $pos - 1 ) {
         my $page = $pages[$i];
-        if ( index( lc($page->{title}), $needle) != -1 ) {
+        if ( index( lc( $page->{title} ), $needle ) != -1 ) {
             $self->select( $page->{index} );
             return;
         }
