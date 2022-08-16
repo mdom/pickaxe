@@ -1,15 +1,12 @@
 package App::pickaxe::Controller;
 use Mojo::Base -signatures, -base;
 use Curses;
-use Mojo::URL;
 use Mojo::File 'tempfile';
 use Mojo::Util 'decode', 'encode';
 use App::pickaxe::Api;
 use App::pickaxe::DisplayMsg 'display_msg';
 use App::pickaxe::AskYesNo 'askyesno';
 use App::pickaxe::Getline 'getline';
-use App::pickaxe::ArrayIterator;
-use IPC::Cmd;
 
 has maxlines => sub { $LINES - 3 };
 
@@ -22,6 +19,7 @@ sub pages {
 }
 
 sub open_in_browser ( $self, $key ) {
+    use IPC::Cmd;
     my $title = $self->state->pages->current->{title};
     IPC::Cmd::run( command => [ 'xdg-open', $self->api->url_for($title) ] );
 }
@@ -84,11 +82,12 @@ sub edit_page ( $self, $key ) {
     }
 }
 
-sub update_helpbar {
+sub update_helpbar ($self) {
     move( 0, 0 );
     clrtoeol;
     attron(A_REVERSE);
-    my $help = "q:Quit w:New e:Edit s:Search /:find o:Open ?:help";
+    my $help = $self->help_summary;
+    $help = substr( $help, 0, $COLS - 1 );
     addstring( $help . ( ' ' x ( $COLS - length($help) ) ) );
     attroff(A_REVERSE);
     refresh;
@@ -98,9 +97,13 @@ sub update_statusbar ($self) {
     move( $LINES - 2, 0 );
     clrtoeol;
     attron(A_REVERSE);
-    my $base   = $self->state->base_url->clone->query( key => undef );
-    my $status = "pickaxe: $base";
-    addstring( $status . ( ' ' x ( $COLS - length($status) ) ) );
+    my ( $left, $right ) = $self->status;
+    $right //= '';
+    $left  //= '';
+    $left  = substr( $left,  0, $COLS - 1 );
+    $right = substr( $right, 0, $COLS - 1 );
+    addstring( $left . ( ' ' x ( $COLS - length($left) ) ) );
+    addstring( $LINES - 2, $COLS - 1 - length($right), $right );
     attroff(A_REVERSE);
     refresh;
 }

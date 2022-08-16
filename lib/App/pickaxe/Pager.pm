@@ -8,6 +8,8 @@ use Mojo::Util 'decode', 'encode';
 
 my $CLEAR = 1;
 
+has help_summary => "q:Quit e:Edit /:find o:Open %:Preview ?:help";
+
 has bindings => sub {
     return {
         'q'                   => 'quit',
@@ -21,10 +23,14 @@ has bindings => sub {
         Curses::KEY_UP        => 'prev_line',
         Curses::KEY_BACKSPACE => 'prev_line',
         '%'                   => 'toggle_filter_mode',
+        Curses::KEY_HOME      => 'top',
+        Curses::KEY_END       => 'bottom',
         Curses::KEY_LEFT      => 'scroll_left',
         Curses::KEY_RIGHT     => 'scroll_right',
         '/'                   => 'find',
         'n'                   => 'find_next',
+        '\\'                  => 'find_toggle',
+        o                     => 'open_in_browser',
     };
 };
 
@@ -46,6 +52,13 @@ has 'pad';
 
 has 'needle';
 has 'matches';
+
+sub status ($self) {
+    my $base    = $self->state->base_url->clone->query( key => undef );
+    my $title   = $self->state->pages->current->{title};
+    my $percent = int( $self->current_line / $self->nlines * 100 );
+    return "pickaxe: $base $title", sprintf( "--%3d%%", $percent );
+}
 
 sub edit_page ( $self, $key ) {
     $self->SUPER::edit_page($key);
@@ -71,7 +84,7 @@ sub create_pad ($self) {
     $self->nlines( @lines + 0 );
     $self->lines( \@lines );
     $self->current_line(0);
-    $self->matches([]);
+    $self->matches( [] );
 
     for my $line (@lines) {
         if ( length($line) > $cols ) {
@@ -101,8 +114,28 @@ sub redraw ( $self, $clear = 0 ) {
         refresh;
         $self->SUPER::redraw;
     }
+    $self->update_statusbar;
     $self->pad->prefresh( $self->current_line, $self->current_column, 1, 0,
         $self->maxlines, $COLS - 1 );
+}
+
+has find_active => 1;
+
+sub find_toggle ( $self, $key ) {
+    return if !@{ $self->matches };
+    my $style;
+    if ( $self->find_active ) {
+        $self->find_active(0);
+        $style = A_NORMAL;
+    }
+    else {
+        $self->find_active(1);
+        $style = A_REVERSE;
+    }
+    for my $match ( @{ $self->matches } ) {
+        chgat( $self->pad, @$match, $style, 0, 0 );
+    }
+    $self->redraw;
 }
 
 sub find_next ( $self, $key ) {
@@ -129,15 +162,25 @@ sub find_next ( $self, $key ) {
                 chgat( $self->pad, $line_no, $-[0], $len, A_REVERSE, 0, 0);
             }
         }
+        $self->find_active(1);
         $self->matches( \@matches );
         $self->redraw;
     }
+
+    ## find_active is always active with a new search. When we have
+    ## matches and find_active is disabled, the user has called find_toggle
+    ## before. So we have to toggle it back here.
+
+    if ( @{ $self->matches } && !$self->find_active ) {
+        $self->find_toggle($key);
+    }
+
     if ( @{ $self->matches } == 1 ) {
         $self->set_line( $self->matches->[0]->[0] );
     }
     elsif ( @{ $self->matches } > 1 ) {
         while (1) {
-            my $match = cycle_shift($self->matches);
+            my $match = cycle_shift( $self->matches );
             if ( $match->[0] != $self->current_line ) {
                 $self->set_line( $match->[0] );
                 last;
@@ -150,7 +193,7 @@ sub find_next ( $self, $key ) {
     return;
 }
 
-sub cycle_shift (  $array ) {
+sub cycle_shift ($array) {
     my $elt = shift @$array;
     push @$array, $elt;
     return $elt;
@@ -218,6 +261,14 @@ sub next_page ( $self, $key ) {
 
 sub prev_page ( $self, $key ) {
     $self->set_line( $self->current_line - $self->maxlines, $CLEAR );
+}
+
+sub top ( $self, $key ) {
+    $self->set_line( 0, $CLEAR );
+}
+
+sub bottom ( $self, $key ) {
+    $self->set_line( $self->nlines - $self->maxlines, $CLEAR );
 }
 
 sub run ($self) {

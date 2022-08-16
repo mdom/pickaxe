@@ -5,6 +5,7 @@
 # TODO c - open new wiki/projekt
 # TODO diff edit with conflicting pages
 # TODO config
+# TODO reverse search
 
 use Mojo::Base -strict, -signatures;
 use Mojo::UserAgent;
