@@ -2,6 +2,7 @@ package App::pickaxe::Pager;
 use Mojo::Base -signatures, 'App::pickaxe::Controller';
 use Curses;
 use App::pickaxe::DisplayMsg 'display_msg';
+use App::pickaxe::Getline 'getline';
 use IPC::Cmd 'run_forked';
 use Mojo::Util 'decode', 'encode';
 
@@ -22,6 +23,8 @@ has bindings => sub {
         '%'                   => 'toggle_filter_mode',
         Curses::KEY_LEFT      => 'scroll_left',
         Curses::KEY_RIGHT     => 'scroll_right',
+        '/'                   => 'find',
+        'n'                   => 'find_next',
     };
 };
 
@@ -37,7 +40,12 @@ has ncolumns => 0;
 has current_line   => 0;
 has current_column => 0;
 
+has 'lines';
+
 has 'pad';
+
+has 'needle';
+has 'matches';
 
 sub edit_page ( $self, $key ) {
     $self->SUPER::edit_page($key);
@@ -61,7 +69,9 @@ sub create_pad ($self) {
     my @lines = split( "\n", $text );
 
     $self->nlines( @lines + 0 );
+    $self->lines( \@lines );
     $self->current_line(0);
+    $self->matches([]);
 
     for my $line (@lines) {
         if ( length($line) > $cols ) {
@@ -93,6 +103,62 @@ sub redraw ( $self, $clear = 0 ) {
     }
     $self->pad->prefresh( $self->current_line, $self->current_column, 1, 0,
         $self->maxlines, $COLS - 1 );
+}
+
+sub find_next ( $self, $key ) {
+    if ( !$self->needle ) {
+        my $needle = getline("Find string: ");
+        return if !$needle;
+
+        $needle = lc($needle);
+        $self->needle($needle);
+
+        my @lines  = @{ $self->lines };
+        my $pos    = $self->current_line;
+
+        for my $match (@{ $self->matches }) {
+            chgat( $self->pad, @$match, A_NORMAL, 0, 0);
+        }
+
+        my @matches;
+        my $len = length($needle);
+        for my $line_no ( $pos .. @lines - 1, 0 .. $pos - 1 ) {
+            my $line = $lines[$line_no];
+            while ( $line =~ /\Q$needle\E/gi ) {
+                push @matches, [ $line_no, $-[0],  $len ];
+                chgat( $self->pad, $line_no, $-[0], $len, A_REVERSE, 0, 0);
+            }
+        }
+        $self->matches( \@matches );
+        $self->redraw;
+    }
+    if ( @{ $self->matches } == 1 ) {
+        $self->set_line( $self->matches->[0]->[0] );
+    }
+    elsif ( @{ $self->matches } > 1 ) {
+        while (1) {
+            my $match = cycle_shift($self->matches);
+            if ( $match->[0] != $self->current_line ) {
+                $self->set_line( $match->[0] );
+                last;
+            }
+        }
+    }
+    else {
+        display_msg "Not found.";
+    }
+    return;
+}
+
+sub cycle_shift (  $array ) {
+    my $elt = shift @$array;
+    push @$array, $elt;
+    return $elt;
+}
+
+sub find ( $self, $key ) {
+    $self->needle('');
+    $self->find_next($key);
 }
 
 sub scroll_left ( $self, $key ) {
