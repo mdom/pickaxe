@@ -6,6 +6,7 @@ use App::pickaxe::ArrayIterator;
 use App::pickaxe::Getline 'getline';
 use App::pickaxe::DisplayMsg 'display_msg';
 use Mojo::Date;
+use Mojo::Template;
 use POSIX 'strftime';
 
 has pad => sub {
@@ -13,7 +14,7 @@ has pad => sub {
 };
 
 has pager => sub ($self) {
-    App::pickaxe::Pager->new( state => $self->state )->run;
+    App::pickaxe::Pager->new( state => $self->state );
 };
 
 has bindings => sub {
@@ -25,7 +26,7 @@ has bindings => sub {
         j                 => 'next_item',
         k                 => 'prev_item',
         e                 => 'edit_page',
-        n                 => 'create_page',
+        w                 => 'create_page',
         o                 => 'open_in_browser',
         "\n"              => 'view_page',
         Curses::KEY_NPAGE => 'next_page',
@@ -34,6 +35,9 @@ has bindings => sub {
         Curses::KEY_RIGHT => 'next_page',
         ' '               => 'next_page',
         s                 => 'search',
+        '/'               => 'find',
+        'n'               => 'find_next',
+        'p'               => 'find_next',
         '?'               => 'display_help',
         '$'               => 'update_pages',
         q                 => 'quit',
@@ -50,6 +54,9 @@ has bindings => sub {
     };
 };
 
+has index_time_format => "%Y-%m-%d %H:%M:%S";
+has index_format      => '%n %u   %t';
+
 sub select ( $self, $new ) {
     return if !$self->pad;
     my $pages = $self->state->pages;
@@ -64,6 +71,44 @@ sub select ( $self, $new ) {
     $self->update_pad($clear);
 }
 
+sub printf ( $self, $page ) {
+    my $fmt = $self->index_format;
+    my $strftime_fmt = $self->index_time_format;
+
+    my $formatted = '';
+    while (1) {
+        if ( $fmt =~ /\G%([a-zA-Z])/gc ) {
+            my ($format) = ($1);
+            if ( $format eq 'n' ) {
+                $formatted .= sprintf( "%4s", $page->{index} + 1 );
+            }
+            elsif ( $format eq 'u' ) {
+                $formatted .= strftime( $strftime_fmt,
+                    gmtime Mojo::Date->new( $page->{updated_on} )->epoch ),
+                  ;
+            }
+            elsif ( $format eq 'c' ) {
+                $formatted .= strftime( $strftime_fmt,
+                    gmtime Mojo::Date->new( $page->{created_on} )->epoch ),
+                  ;
+            }
+            elsif ( $format eq 't' ) {
+                $formatted .= $page->{title};
+            }
+            else {
+                die "Unknown format specifier <$format>\n";
+            }
+        }
+        elsif ( $fmt =~ /\G([^%]+)/gc ) {
+            $formatted .= $1;
+        }
+        elsif ( $fmt =~ /\G$/gc ) {
+            last;
+        }
+    }
+    return $formatted;
+}
+
 sub create_pad ($self) {
     my $pages = $self->state->pages;
     if ( !$pages->count ) {
@@ -73,16 +118,8 @@ sub create_pad ($self) {
     my $pad = newpad( $pages->count, $COLS );
     my $x   = 0;
     for my $page ( $pages->each ) {
-        my $len_counter = length( $pages->count );
-        my $line        = sprintf(
-            "%${len_counter}d   %s   %-s",
-            ( $x + 1 ),
-            strftime(
-                "%Y-%m-%d %H:%M:%S",
-                gmtime Mojo::Date->new( $page->{updated_on} )->epoch
-            ),
-            $page->{title},
-        );
+        $page->{index} = $x;
+        my $line = $self->printf($page);
         $line = substr( $line, 0, $COLS - 1 );
         $pad->addstring( $x, 0, $line );
         $x++;
@@ -108,6 +145,36 @@ sub update_pad ( $self, $clear ) {
 sub update_pages ( $self, $key ) {
     $self->set_pages( $self->api->pages );
     display_msg("Updated.");
+}
+
+has 'needle';
+
+sub find_next ( $self, $key ) {
+    display_msg "There are no pages." if !$self->pad;
+    if (!$self->needle) {
+        my $needle = getline( "Find title: " );
+        return if !$needle;
+        $needle = lc($needle);
+        $self->needle($needle);
+    }
+    my $needle = $self->needle;
+    my @pages = $self->pages->each;
+    my $pos = $self->pages->pos;
+    for my $i ($pos+1 .. @pages-1, 0 .. $pos -1 ) {
+        my $page = $pages[$i];
+        if ( index( lc($page->{title}), $needle) != -1 ) {
+            $self->select( $page->{index} );
+            return;
+        }
+    }
+    display_msg "Not found.";
+    return;
+}
+
+sub find ( $self, $key ) {
+    display_msg "There are no pages." if !$self->pad;
+    $self->needle('');
+    $self->find_next($key);
 }
 
 sub jump ( $self, $key ) {
@@ -185,7 +252,7 @@ sub set_pages ( $self, $pages ) {
         $pages = [ sort { $b->{updated_on} cmp $a->{updated_on} } @$pages ];
     }
 
-    $self->state->pages( App::pickaxe::ArrayIterator->new( $pages ));
+    $self->state->pages( App::pickaxe::ArrayIterator->new( array => $pages ) );
     if ( $self->pad ) {
         $self->pad->delwin;
     }
