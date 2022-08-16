@@ -21,7 +21,7 @@ noecho;
 curs_set(0);
 refresh;    # This is the necessary but undocumented initial refresh
 
-eval { App::pickaxe::Index->new( state => App::pickaxe::State->new() )->run };
+eval { App::pickaxe::Index->new( state => App::pickaxe::State->new )->run };
 
 my $err;
 if ($@) {

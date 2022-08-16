@@ -11,7 +11,7 @@ has bindings => sub {
     return {
         'q'                   => 'quit',
         'e'                   => 'edit_page',
-        'n'                   => 'create_page',
+        'w'                   => 'create_page',
         Curses::KEY_NPAGE     => 'next_page',
         " "                   => 'next_page',
         Curses::KEY_PPAGE     => 'prev_page',
@@ -20,6 +20,8 @@ has bindings => sub {
         Curses::KEY_UP        => 'prev_line',
         Curses::KEY_BACKSPACE => 'prev_line',
         '%'                   => 'toggle_filter_mode',
+        Curses::KEY_LEFT      => 'scroll_left',
+        Curses::KEY_RIGHT     => 'scroll_right',
     };
 };
 
@@ -27,11 +29,13 @@ has 'index';
 
 has filter_mode => 0;
 
-has filter => sub { ['pandoc', '-f', 'textile', '-t', 'plain' ] };
+has filter => sub { [ 'pandoc', '-f', 'textile', '-t', 'plain' ] };
 
-has nlines => 0;
+has nlines   => 0;
+has ncolumns => 0;
 
-has current_line => 0;
+has current_line   => 0;
+has current_column => 0;
 
 has 'pad';
 
@@ -41,17 +45,17 @@ sub edit_page ( $self, $key ) {
     $self->redraw(1);
 }
 
-sub create_pad ( $self ) {
-    if ($self->pad) {
+sub create_pad ($self) {
+    if ( $self->pad ) {
         $self->pad->delwin;
     }
-    my $cols  = $COLS;
+    my $cols = $COLS;
     my $text = $self->api->text_for( $self->pages->current->{title} );
 
-    if ($self->filter_mode) {
-        $text = encode('utf8', $text);
-        my $result = run_forked($self->filter, { child_stdin => $text });
-        $text = decode('utf8', $result->{stdout});
+    if ( $self->filter_mode ) {
+        $text = encode( 'utf8', $text );
+        my $result = run_forked( $self->filter, { child_stdin => $text } );
+        $text = decode( 'utf8', $result->{stdout} );
     }
 
     my @lines = split( "\n", $text );
@@ -65,6 +69,8 @@ sub create_pad ( $self ) {
         }
     }
 
+    $self->ncolumns($cols);
+
     my $pad = newpad( @lines + 1, $cols );
 
     my $x = 0;
@@ -72,8 +78,8 @@ sub create_pad ( $self ) {
         addstring( $pad, $x, 0, $line ) or die "addstring: $line\n";
         $x++;
     }
-    $self->pad( $pad );
-};
+    $self->pad($pad);
+}
 
 sub DESTROY ($self) {
     $self->pad->delwin;
@@ -85,8 +91,28 @@ sub redraw ( $self, $clear = 0 ) {
         refresh;
         $self->SUPER::redraw;
     }
-    $self->pad->prefresh( $self->current_line, 0, 1, 0, $self->maxlines,
-        $COLS - 1 );
+    $self->pad->prefresh( $self->current_line, $self->current_column, 1, 0,
+        $self->maxlines, $COLS - 1 );
+}
+
+sub scroll_left ( $self, $key ) {
+    $self->set_column( $self->current_column - $COLS / 2 );
+}
+
+sub scroll_right ( $self, $key ) {
+    $self->set_column( $self->current_column + $COLS / 2 );
+}
+
+sub set_column ( $self, $new ) {
+    $self->current_column($new);
+    if ( $self->current_column < 0 ) {
+        $self->current_column(0);
+    }
+    elsif ( $self->current_column > $self->ncolumns - $COLS / 2 ) {
+        $self->current_column( $self->ncolumns - $COLS / 2 );
+    }
+
+    $self->redraw(1);
 }
 
 sub set_line ( $self, $new, $clear = 0 ) {
@@ -100,7 +126,7 @@ sub set_line ( $self, $new, $clear = 0 ) {
     $self->redraw($clear);
 }
 
-sub toggle_filter_mode ($self, $key) {
+sub toggle_filter_mode ( $self, $key ) {
     $self->filter_mode( !$self->filter_mode );
     $self->create_pad;
     $self->redraw(1);
@@ -112,19 +138,19 @@ sub toggle_filter_mode ($self, $key) {
     }
 }
 
-sub next_line ($self, $key) {
+sub next_line ( $self, $key ) {
     $self->set_line( $self->current_line + 1 );
 }
 
-sub prev_line ($self, $key) {
+sub prev_line ( $self, $key ) {
     $self->set_line( $self->current_line - 1 );
 }
 
-sub next_page ($self, $key) {
+sub next_page ( $self, $key ) {
     $self->set_line( $self->current_line + $self->maxlines, $CLEAR );
 }
 
-sub prev_page ($self, $key) {
+sub prev_page ( $self, $key ) {
     $self->set_line( $self->current_line - $self->maxlines, $CLEAR );
 }
 
