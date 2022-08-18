@@ -12,15 +12,14 @@ use Mojo::UserAgent;
 use App::pickaxe::Index;
 use App::pickaxe::State;
 
-our $VERSION = '0.01';
-
 use Curses;
+
+our $VERSION = '0.01';
 
 initscr;
 keypad( stdscr, 1 );
 noecho;
 curs_set(0);
-refresh;    # This is the necessary but undocumented initial refresh
 
 eval { App::pickaxe::Index->new( state => App::pickaxe::State->new )->run };
 
