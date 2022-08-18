@@ -63,7 +63,8 @@ sub edit_page ( $self, $key ) {
     $tempfile->spurt( encode( 'utf8', $text ) );
 
     endwin;
-    system( 'vim', $tempfile->to_string );
+    my $editor = $ENV{VISUAL} || $ENV{EDITOR} || 'vi';
+    system( $editor, $tempfile->to_string );
     $self->redraw;
 
     my $new_text = decode( 'utf8', $tempfile->slurp );
