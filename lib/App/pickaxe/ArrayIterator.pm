@@ -5,12 +5,6 @@ has array  => sub { [] };
 has pos    => 0;
 has oldpos => 0;
 
-sub replace ( $self, $new ) {
-    $self->array( $new );
-    $self->pos(0);
-    $self->oldpos(0);
-}
-
 sub seek ( $self, $offset ) {
     $self->oldpos( $self->pos );
     $self->pos($offset);
@@ -20,7 +14,7 @@ sub seek ( $self, $offset ) {
     elsif ( $self->pos > @{ $self->array } - 1 ) {
         $self->pos( @{ $self->array } - 1 );
     }
-    return $self->oldpos;
+    return;
 }
 
 sub next ($self) {

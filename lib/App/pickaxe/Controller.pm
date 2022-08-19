@@ -25,7 +25,7 @@ sub open_in_browser ( $self, $key ) {
 }
 
 sub create_page ( $self, $key ) {
-    my $title = getline("Page name: ");
+    my $title = getline( "Page name: ", { history => $self->find_history } );
     if ( !$title ) {
         display_msg("Aborted.");
         return;
@@ -149,7 +149,7 @@ sub query_connection_details ($self) {
     else {
         my $username = getline("Username: ");
         my $password = getline( "Password: ", { password => 1 } );
-        $self->base_url->userinfo("$username:$password");
+        $self->state->base_url->userinfo("$username:$password");
     }
 }
 

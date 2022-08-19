@@ -8,6 +8,10 @@ my %getline_bindings = (
     Curses::KEY_BACKSPACE => 'backward_delete_character',
     Curses::KEY_LEFT      => 'backward_char',
     Curses::KEY_RIGHT     => 'forward_char',
+    Curses::KEY_UP        => 'prev_history',
+    Curses::KEY_DOWN      => 'next_history',
+    "\cp"                 => 'prev_history',
+    "\cn"                 => 'next_history',
     "\cA"                 => 'beginning_of_line',
     "\cE"                 => 'end_of_line',
     "\cD"                 => 'delete_character',
@@ -19,19 +23,25 @@ my %getline_bindings = (
 my $buffer = '';
 my $cursor = 0;
 my @history;
+my $history_index;
 
-sub getline ( $prompt, $options = {}) {
-    my ($lines, $cols);
-    move($LINES - 1, 0 );
+sub getline ( $prompt, $options = {} ) {
+    my ( $lines, $cols );
+    move( $LINES - 1, 0 );
     $buffer = $options->{buffer} || '';
-    $cursor = length($buffer) ;
+    $cursor = length($buffer);
+
+    $history_index = 0;
+    @history = @{ $options->{history} || [] } ;
+    unshift @history, $buffer;
+
     clrtoeol;
     addstring($prompt);
     addstring($buffer);
     chgat( $LINES - 1, $cursor + length($prompt), 1, A_REVERSE, 0, 0 );
     refresh;
     while (1) {
-        my $key = getchar;
+        my $key      = getchar;
         my $funcname = $getline_bindings{$key} || 'self_insert';
         if ( $funcname eq 'accept_line' ) {
             last;
@@ -41,7 +51,7 @@ sub getline ( $prompt, $options = {}) {
             last;
         }
         no strict 'refs';
-        &$funcname($key);
+        &$funcname( $key, $options );
 
         move( $LINES - 1, length($prompt) );
         clrtoeol;
@@ -49,24 +59,31 @@ sub getline ( $prompt, $options = {}) {
 
         my $offset = int( $cursor / $rlcols ) * $rlcols;
         my $x      = substr( $buffer, $offset, $rlcols );
-        if ($options->{password} ) {
+
+        if ( $options->{password} ) {
             $x = '*' x length($x);
         }
         addstring($x);
         if ( $offset != 0 ) {
-            addstring(0, $COLS - 1, '<' );
+            addstring( 0, $COLS - 1, '<' );
         }
         elsif ( length($buffer) > $rlcols ) {
             addstring( 0, $COLS - 1, '>' );
         }
-        chgat( $LINES - 1, $cursor + length($prompt) - $offset, 1, A_REVERSE, 0, 0 );
+        chgat( $LINES - 1, $cursor + length($prompt) - $offset,
+            1, A_REVERSE, 0, 0 );
 
         refresh;
     }
     move( $LINES - 1, 0 );
     clrtoeol;
-    my $subwin = subwin($stdscr, 1, $COLS, $LINES - 1, 0);
+    my $subwin = subwin( $stdscr, 1, $COLS, $LINES - 1, 0 );
     refresh($subwin);
+
+    if ( $buffer && $options->{history} ) {
+        unshift @{ $options->{history} }, $buffer;
+    }
+
     return $buffer;
 }
 
@@ -81,7 +98,7 @@ sub backward_delete_character {
     }
 }
 
-sub self_insert ($key) {
+sub self_insert ( $key, $options ) {
     substr( $buffer, $cursor, 0, $key );
     $cursor++;
 }
@@ -106,12 +123,18 @@ sub kill_line {
     substr( $buffer, $cursor ) = '';
 }
 
-sub add_to_history ($buffer) {
-    if ($buffer ne '' ) {
-        push @history, $buffer;
-    }
+sub next_history {
+    $history[$history_index] = $buffer;
+    $history_index = $history_index - 1 < 0 ? @history - 1 : $history_index - 1;
+    $buffer        = $history[$history_index];
+    $cursor        = length($buffer);
 }
 
-
+sub prev_history {
+    $history[$history_index] = $buffer;
+    $history_index = $history_index + 1 >= @history ? 0 : $history_index + 1;
+    $buffer        = $history[$history_index];
+    $cursor        = length($buffer);
+}
 
 1;

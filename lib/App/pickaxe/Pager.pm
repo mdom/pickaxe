@@ -138,19 +138,24 @@ sub find_toggle ( $self, $key ) {
     $self->redraw;
 }
 
+has find_history => sub { [] };
+
 sub find_next ( $self, $key ) {
     if ( !$self->needle ) {
-        my $needle = getline("Find string: ");
+        my $needle =
+          getline( "Find string: ", { history => $self->find_history } );
         return if !$needle;
+
+        $self->find_history->add($needle);
 
         $needle = lc($needle);
         $self->needle($needle);
 
-        my @lines  = @{ $self->lines };
-        my $pos    = $self->current_line;
+        my @lines = @{ $self->lines };
+        my $pos   = $self->current_line;
 
-        for my $match (@{ $self->matches }) {
-            chgat( $self->pad, @$match, A_NORMAL, 0, 0);
+        for my $match ( @{ $self->matches } ) {
+            chgat( $self->pad, @$match, A_NORMAL, 0, 0 );
         }
 
         my @matches;
@@ -158,8 +163,8 @@ sub find_next ( $self, $key ) {
         for my $line_no ( $pos .. @lines - 1, 0 .. $pos - 1 ) {
             my $line = $lines[$line_no];
             while ( $line =~ /\Q$needle\E/gi ) {
-                push @matches, [ $line_no, $-[0],  $len ];
-                chgat( $self->pad, $line_no, $-[0], $len, A_REVERSE, 0, 0);
+                push @matches, [ $line_no, $-[0], $len ];
+                chgat( $self->pad, $line_no, $-[0], $len, A_REVERSE, 0, 0 );
             }
         }
         $self->find_active(1);
