@@ -94,9 +94,10 @@ sub compile_index_format ($self) {
 
     my %identifier = (
         n => [ d => sub { $_[0]->{index} + 1 } ],
-        t => [ s => sub { $_[0]->{title} } ],
+        t => [ s => sub { my $t = $_[0]->{title}; $t =~ s/_/ /g; $t } ],
         u => [ s => sub { $self->format_time( $_[0]->{'updated_on'} ) } ],
         c => [ s => sub { $self->format_time( $_[0]->{'created_on'} ) } ],
+        v => [ s => sub { $_[0]->{version} } ],
     );
 
     while (1) {
@@ -162,11 +163,13 @@ sub update_pages ( $self, $key ) {
 }
 
 has 'needle';
+has 'find_history' => sub { [] };
 
 sub find_next ( $self, $key ) {
     display_msg "There are no pages." if !$self->pad;
     if ( !$self->needle ) {
-        my $needle = getline("Find title: ");
+        my $needle =
+          getline( "Find title: ", { history => $self->find_history } );
         return if !$needle;
         $needle = lc($needle);
         $self->needle($needle);
@@ -275,7 +278,8 @@ sub set_pages ( $self, $pages ) {
 }
 
 sub search ( $self, $key ) {
-    my $query = getline("Search for pages matching: ");
+    my $query = getline( "Search for pages matching: ",
+        { history => $self->find_history } );
     if ( $query eq 'all' ) {
         $self->set_pages( $self->api->pages );
     }

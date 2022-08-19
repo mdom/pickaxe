@@ -1,16 +1,15 @@
 #!/usr/bin/perl
 
 # TODO check http return codes
-# TODO getline history
 # TODO c - open new wiki/projekt
 # TODO diff edit with conflicting pages
-# TODO config
 # TODO reverse search
 
 use Mojo::Base -strict, -signatures;
 use Mojo::UserAgent;
 use App::pickaxe::Index;
 use App::pickaxe::State;
+use App::pickaxe::Config 'read_config';
 
 use Curses;
 
@@ -21,7 +20,20 @@ keypad( stdscr, 1 );
 noecho;
 curs_set(0);
 
-eval { App::pickaxe::Index->new( state => App::pickaxe::State->new )->run };
+my $url = shift;
+
+my $config = read_config;
+
+if ( $url ) {
+    $config->{base_url} = $url;
+}
+
+if ( $config->{base_url} ) {
+    $config->{base_url} = Mojo::URL->new($config->{base_url});
+}
+my $state = App::pickaxe::State->new( $config );
+
+eval { App::pickaxe::Index->new( state => $state )->run };
 
 my $err;
 if ($@) {
