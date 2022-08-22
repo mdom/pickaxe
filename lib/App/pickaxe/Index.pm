@@ -197,7 +197,7 @@ sub find ( $self, $key ) {
 sub jump ( $self, $key ) {
     return if !$self->pad;
     my $number = getline( "Jump to wiki page: ", { buffer => $key } );
-    if ( $number =~ /\D/ ) {
+    if ( !$number || $number =~ /\D/ ) {
         display_msg("Argument must be a number.");
         return;
     }
