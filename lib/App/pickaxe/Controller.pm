@@ -5,7 +5,7 @@ use Mojo::File 'tempfile';
 use Mojo::Util 'decode', 'encode';
 use App::pickaxe::Api;
 use App::pickaxe::DisplayMsg 'display_msg';
-use App::pickaxe::AskYesNo 'askyesno';
+use App::pickaxe::SelectOption 'askyesno';
 use App::pickaxe::Getline 'getline';
 
 has maxlines => sub { $LINES - 3 };
