@@ -5,6 +5,7 @@ use App::pickaxe::Pager;
 use App::pickaxe::ArrayIterator;
 use App::pickaxe::Getline 'getline';
 use App::pickaxe::DisplayMsg 'display_msg';
+use App::pickaxe::SelectOption 'select_option';
 use POSIX 'strftime';
 
 has 'pad';
@@ -13,7 +14,10 @@ has pager => sub ($self) {
     App::pickaxe::Pager->new( state => $self->state );
 };
 
-has help_summary => "q:Quit w:New e:Edit s:Search /:find o:Open ?:help";
+has help_summary =>
+  "q:Quit w:New e:Edit s:Search /:find b:Browse o:Order ?:help";
+
+has 'order' => 'reverse_updated_on';
 
 has bindings => sub {
     return {
@@ -25,7 +29,7 @@ has bindings => sub {
         k                 => 'prev_item',
         e                 => 'edit_page',
         w                 => 'create_page',
-        o                 => 'open_in_browser',
+        b                 => 'open_in_browser',
         "\n"              => 'view_page',
         Curses::KEY_NPAGE => 'next_page',
         Curses::KEY_PPAGE => 'prev_page',
@@ -33,6 +37,8 @@ has bindings => sub {
         Curses::KEY_RIGHT => 'next_page',
         ' '               => 'next_page',
         s                 => 'search',
+        o                 => 'set_order',
+        O                 => 'set_reverse_order',
         '/'               => 'find',
         'n'               => 'find_next',
         'p'               => 'find_next',
@@ -188,6 +194,36 @@ sub find_next ( $self, $key ) {
     return;
 }
 
+sub set_order ( $self, $key ) {
+    my $order = select_option(
+        'Sort Updated/Created/Title?: ',
+        {
+            u => 'updated_on',
+            c => 'created_on',
+            t => 'title',
+        }
+    );
+    if ($order) {
+        $self->order($order);
+        $self->set_pages( $self->pages->array );
+    }
+}
+
+sub set_reverse_order ( $self, $key ) {
+    my $order = select_option(
+        'Rev-Sort Updated/Created/Title?: ',
+        {
+            u => 'updated_on',
+            c => 'created_on',
+            t => 'title',
+        }
+    );
+    if ($order) {
+        $self->order("reverse_$order");
+        $self->set_pages( $self->pages->array );
+    }
+}
+
 sub find ( $self, $key ) {
     display_msg "There are no pages." if !$self->pad;
     $self->needle('');
@@ -261,12 +297,14 @@ sub next_page ( $self, $key ) {
     }
 }
 
-has 'order' => 'revdate';
-
 sub set_pages ( $self, $pages ) {
 
-    if ( $self->order eq 'revdate' ) {
-        $pages = [ sort { $b->{updated_on} cmp $a->{updated_on} } @$pages ];
+    my $order = $self->order =~ s/^reverse_//r;
+
+    $pages = [ sort { $a->{$order} cmp $b->{$order} } @$pages ];
+
+    if ( $self->order =~ /^reverse_/ ) {
+        $pages = [ reverse @$pages ];
     }
 
     $self->state->pages( App::pickaxe::ArrayIterator->new( array => $pages ) );
