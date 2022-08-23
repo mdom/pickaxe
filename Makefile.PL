@@ -8,6 +8,7 @@ WriteMakefile(
         'Mojolicious'     => 0,
         'Curses'          => 0,
         'IO::Socket::SSL' => 0,
+        'Algorithm::Diff' => 0,
     },
 );
 

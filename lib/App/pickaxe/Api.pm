@@ -33,7 +33,7 @@ sub url_for ( $self, $title ) {
 }
 
 sub text_for ( $self, $title ) {
-    $self->get("wiki/$title.json")->json->{wiki_page}->{text};
+    $self->page($title)->json->{wiki_page}->{text};
 }
 
 sub save ( $self, $title, $text, $version = undef ) {
@@ -44,6 +44,9 @@ sub save ( $self, $title, $text, $version = undef ) {
               { text => $text, ($version ? (version => $version) : () ) }
         }
     )->result;
+    if ( !$res->is_success && $res->code != 409) {
+      die( 'Error saving wiki page: ' . $res->message );
+    }
     return $res;
 }
 

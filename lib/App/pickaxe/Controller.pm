@@ -5,9 +5,9 @@ use Mojo::File 'tempfile';
 use Mojo::Util 'decode', 'encode';
 use App::pickaxe::Api;
 use App::pickaxe::DisplayMsg 'display_msg';
-use App::pickaxe::SelectOption 'askyesno';
+use App::pickaxe::SelectOption 'askyesno', 'select_option';
 use App::pickaxe::Getline 'getline';
-use IPC::Cmd 'run_forked';
+use Algorithm::Diff;
 
 has maxlines => sub { $LINES - 3 };
 
@@ -31,12 +31,7 @@ sub create_page ( $self, $key ) {
         display_msg("Aborted.");
         return;
     }
-    my $tempfile = tempfile;
-    endwin;
-    system( 'vim', $tempfile->to_string );
-    $self->redraw;
-
-    my $new_text = decode( 'utf8', $tempfile->slurp );
+    my $new_text = $self->call_editor(tempfile);
 
     if ($new_text) {
         if ( askyesno("Save page $title?") ) {
@@ -53,6 +48,37 @@ sub create_page ( $self, $key ) {
     }
 }
 
+sub save_page ( $self, $title, $new_text, $version = undef ) {
+    while (1) {
+        my $res = $self->api->save( $title, $new_text, $version );
+        if ( $res->is_success ) {
+            display_msg('Saved.');
+        }
+        elsif ( $res->code == 409 ) {
+            my $option = select_option(
+                'Conflict detected. Edit diff/Abort/Overwrite?: ',
+                { e => 'edit', a => 'abort', o => 'overwrite' }
+            );
+            if ( $option eq 'edit' ) {
+                ( $new_text, $version ) =
+                  $self->handle_conflict( $title, $new_text );
+                if ( defined $new_text ) {
+                    next;
+                }
+                display_msg('Not saved.');
+            }
+            elsif ( $option eq 'abort' ) {
+                display_msg('Not saved.');
+            }
+            elsif ( $option eq 'overwrite' ) {
+                $self->api->save( $title, $new_text );
+                display_msg('Saved.');
+            }
+        }
+        last;
+    }
+}
+
 sub edit_page ( $self, $key ) {
     my $title   = $self->state->pages->current->{title};
     my $version = $self->state->pages->current->{version};
@@ -61,60 +87,75 @@ sub edit_page ( $self, $key ) {
         $self->display_msg( "Can't retrieve $title: " . $res->msg );
         return;
     }
-    my $text     = $res->json->{wiki_page}->{text};
+    my $text = $res->json->{wiki_page}->{text};
+    $text =~ s/\r//g;
     my $tempfile = tempfile;
     $tempfile->spurt( encode( 'utf8', $text ) );
 
-    my $new_text = $self->call_editor( $tempfile);
-
-    while (1) {
-        if ( $new_text ne $text ) {
-            if ( askyesno("Save page $title?") ) {
-                my $res = $self->api->save( $title, $new_text, $version );
-                if ( $res->is_success ) {
-                    display_msg('Saved.');
-                }
-                elsif ( $res->code == 409 ) {
-                    $new_text = $self->handle_conflict( $title, $tempfile, $new_text );
-                }
-                else {
-                    display_msg( 'Error saving wiki page: ' . $res->message );
-                }
-                last;
-            }
-            else {
-                display_msg('Not saved.');
-                last;
-            }
+    my $new_text = $self->call_editor($tempfile);
+    if ( $text ne $new_text ) {
+        if ( askyesno("Save page $title?") ) {
+            $self->save_page( $title, $new_text, $version );
         }
         else {
-            display_msg('Discard unmodified page.');
-            last;
+            display_msg('Not saved.');
         }
+    }
+    else {
+        display_msg('Discard unmodified page.');
     }
 }
 
-sub handle_conflict ( $self, $title, $tempfile, $new_text ) {
+sub handle_conflict ( $self, $title, $old_text ) {
     my $res = $self->api->page($title);
     if ( !$res->is_success ) {
         $self->display_msg( "Can't retrieve $title: " . $res->msg );
         return;
     }
-    my $text   = $res->json->{wiki_page}->{text};
+    my $page     = $res->json->{wiki_page};
+    my $new_text = $page->{text};
+    $new_text =~ s/\r//g;
+    my $version = $page->{version};
 
-    my $context_lines_1 = scalar split(/\n/, $text);
-    my $context_lines_2 = scalar split(/\n/, $new_text);
-    my $context_lines = $context_lines_2 > $context_lines_1 ? $context_lines_2 : $context_lines_1;
+    my @seq1 = split( /\n/, $old_text );
+    my @seq2 = split( /\n/, $new_text );
 
-    my $diff_cmd = ['diff', '-L', 'remote', '-L', 'local', '-U', $context_lines, '-', $tempfile->to_string ];
+    my $diff = Algorithm::Diff->new( \@seq1, \@seq2 );
 
-    my $result = run_forked( $diff_cmd, { child_stdin => encode( 'utf8', $text ) } );
+    my $diff_output = '';
+    while ( $diff->Next ) {
+        if ( my @context = $diff->Same ) {
+            $diff_output .= " $_\n" for @context;
+            next;
+        }
+        $diff_output .= "-$_\n" for $diff->Items(1);
+        $diff_output .= "+$_\n" for $diff->Items(2);
+    }
 
-    $tempfile->spurt( encode( 'utf8', $result->{stdout} ) );
-    return $self->call_editor( $tempfile);
+    my $tempfile = tempfile;
+    $tempfile->spurt( encode( 'utf8', $diff_output ) );
+    my $resolved_text;
+    while (1) {
+        $resolved_text = $self->call_editor($tempfile);
+        if ( $resolved_text =~ /^(?:\+|\-)/sm ) {
+            my $option = select_option(
+                'Unresolved conflicts. Edit/Abort?:',
+                { e => 'edit', a => 'abort' }
+            );
+            if ( $option eq 'edit' ) {
+                next;
+            }
+            elsif ( $option eq 'abort' ) {
+                return;
+            }
+        }
+        last;
+    }
+    $resolved_text =~ s/^ //smg;
+    return $resolved_text, $version;
 }
 
-sub call_editor ($self, $file) {
+sub call_editor ( $self, $file ) {
     endwin;
     my $editor = $ENV{VISUAL} || $ENV{EDITOR} || 'vi';
     system( $editor, $file->to_string );
