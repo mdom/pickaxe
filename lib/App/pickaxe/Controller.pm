@@ -7,6 +7,7 @@ use App::pickaxe::Api;
 use App::pickaxe::DisplayMsg 'display_msg';
 use App::pickaxe::SelectOption 'askyesno';
 use App::pickaxe::Getline 'getline';
+use IPC::Cmd 'run_forked';
 
 has maxlines => sub { $LINES - 3 };
 
@@ -53,8 +54,9 @@ sub create_page ( $self, $key ) {
 }
 
 sub edit_page ( $self, $key ) {
-    my $title = $self->state->pages->current->{title};
-    my $res   = $self->api->page($title);
+    my $title   = $self->state->pages->current->{title};
+    my $version = $self->state->pages->current->{version};
+    my $res     = $self->api->page($title);
     if ( !$res->is_success ) {
         $self->display_msg( "Can't retrieve $title: " . $res->msg );
         return;
@@ -63,25 +65,61 @@ sub edit_page ( $self, $key ) {
     my $tempfile = tempfile;
     $tempfile->spurt( encode( 'utf8', $text ) );
 
-    endwin;
-    my $editor = $ENV{VISUAL} || $ENV{EDITOR} || 'vi';
-    system( $editor, $tempfile->to_string );
-    $self->redraw;
+    my $new_text = $self->call_editor( $tempfile);
 
-    my $new_text = decode( 'utf8', $tempfile->slurp );
-
-    if ( $new_text ne $text ) {
-        if ( askyesno("Save page $title?") ) {
-            my $res = $self->api->save( $title, $new_text );
-            display_msg('Saved.');
+    while (1) {
+        if ( $new_text ne $text ) {
+            if ( askyesno("Save page $title?") ) {
+                my $res = $self->api->save( $title, $new_text, $version );
+                if ( $res->is_success ) {
+                    display_msg('Saved.');
+                }
+                elsif ( $res->code == 409 ) {
+                    $new_text = $self->handle_conflict( $title, $tempfile, $new_text );
+                }
+                else {
+                    display_msg( 'Error saving wiki page: ' . $res->message );
+                }
+                last;
+            }
+            else {
+                display_msg('Not saved.');
+                last;
+            }
         }
         else {
-            display_msg('Not saved.');
+            display_msg('Discard unmodified page.');
+            last;
         }
     }
-    else {
-        display_msg('Discard unmodified page.');
+}
+
+sub handle_conflict ( $self, $title, $tempfile, $new_text ) {
+    my $res = $self->api->page($title);
+    if ( !$res->is_success ) {
+        $self->display_msg( "Can't retrieve $title: " . $res->msg );
+        return;
     }
+    my $text   = $res->json->{wiki_page}->{text};
+
+    my $context_lines_1 = scalar split(/\n/, $text);
+    my $context_lines_2 = scalar split(/\n/, $new_text);
+    my $context_lines = $context_lines_2 > $context_lines_1 ? $context_lines_2 : $context_lines_1;
+
+    my $diff_cmd = ['diff', '-L', 'remote', '-L', 'local', '-U', $context_lines, '-', $tempfile->to_string ];
+
+    my $result = run_forked( $diff_cmd, { child_stdin => encode( 'utf8', $text ) } );
+
+    $tempfile->spurt( encode( 'utf8', $result->{stdout} ) );
+    return $self->call_editor( $tempfile);
+}
+
+sub call_editor ($self, $file) {
+    endwin;
+    my $editor = $ENV{VISUAL} || $ENV{EDITOR} || 'vi';
+    system( $editor, $file->to_string );
+    $self->redraw;
+    return decode( 'utf8', $file->slurp );
 }
 
 sub update_helpbar ($self) {
