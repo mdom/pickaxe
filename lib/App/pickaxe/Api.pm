@@ -47,6 +47,15 @@ sub put ( $self, $path, $text ) {
     return $res;
 }
 
+sub delete ( $self, $title ) {
+    my $url = $self->base_url->clone->path("wiki/$title.json");
+    my $res = $self->ua->delete( $url )->result;
+    if ( !$res->is_success ) {
+        die $res->message . "\n";
+    }
+    return $res;
+}
+
 sub pages ($self) {
     $self->get("wiki/index.json")->json->{wiki_pages};
 }

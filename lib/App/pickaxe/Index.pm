@@ -5,7 +5,7 @@ use App::pickaxe::Pager;
 use App::pickaxe::ArrayIterator;
 use App::pickaxe::Getline 'getline';
 use App::pickaxe::DisplayMsg 'display_msg';
-use App::pickaxe::SelectOption 'select_option';
+use App::pickaxe::SelectOption 'select_option', 'askyesno';
 use POSIX 'strftime';
 
 has 'pad';
@@ -15,7 +15,7 @@ has pager => sub ($self) {
 };
 
 has help_summary =>
-  "q:Quit w:New e:Edit s:Search /:find b:Browse o:Order ?:help";
+  "q:Quit w:New e:Edit s:Search /:find b:Browse o:Order D:delete ?:help";
 
 has 'order' => 'reverse_updated_on';
 
@@ -39,6 +39,7 @@ has bindings => sub {
         s                 => 'search',
         o                 => 'set_order',
         O                 => 'set_reverse_order',
+        D                 => 'delete_page',
         '/'               => 'find',
         'n'               => 'find_next',
         'p'               => 'find_next',
@@ -161,6 +162,16 @@ sub update_pad ( $self, $clear ) {
         refresh;
     }
     prefresh( $self->pad, $offset, 0, 1, 0, $LINES - 3, $COLS - 1 );
+}
+
+sub delete_page ( $self, $key ) {
+    display_msg "There are no pages." if !$self->pad;
+    my $title = $self->pages->current->{title};
+    if ( askyesno("Delete page $title?") ) {
+        $self->api->delete($title);
+        $self->set_pages( $self->api->pages );
+        display_msg("Deleted.");
+    }
 }
 
 sub update_pages ( $self, $key ) {
