@@ -56,7 +56,13 @@ has 'matches';
 sub status ($self) {
     my $base    = $self->state->base_url->clone->query( key => undef );
     my $title   = $self->state->pages->current->{title};
-    my $percent = int( $self->current_line / $self->nlines * 100 );
+    my $percent;
+    if ( $self->nlines == 0 ) {
+        $percent = '100';
+    }
+    else {
+        $percent = int( $self->current_line / $self->nlines * 100 );
+    }
     return "pickaxe: $base $title", sprintf( "--%3d%%", $percent );
 }
 
@@ -73,10 +79,17 @@ sub create_pad ($self) {
     my $cols = $COLS;
     my $text = $self->api->text_for( $self->pages->current->{title} );
 
-    if ( $self->filter_mode ) {
-        $text = encode( 'utf8', $text );
-        my $result = run_forked( $self->filter, { child_stdin => $text } );
-        $text = decode( 'utf8', $result->{stdout} );
+    if ( $text && $self->filter_mode ) {
+        ## in case run_forked messes with the terminal
+        ## TODO check if pandoc is installed on startup
+        endwin;
+        my $result = run_forked( $self->filter, { child_stdin => encode( 'utf8', $text ) } );
+        if ( $result->{stdout} ) {
+            $text = decode( 'utf8', $result->{stdout} );
+        }
+        else {
+            display_msg("Can't call pandoc.");
+        }
     }
 
     my @lines = split( "\n", $text );
