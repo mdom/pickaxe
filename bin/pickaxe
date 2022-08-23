@@ -1,8 +1,6 @@
 #!/usr/bin/perl
 
-# TODO check http return codes
 # TODO c - open new wiki/projekt
-# TODO diff edit with conflicting pages
 # TODO reverse search
 
 use Mojo::Base -strict, -signatures;
