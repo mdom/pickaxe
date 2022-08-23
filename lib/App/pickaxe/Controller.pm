@@ -40,6 +40,7 @@ sub create_page ( $self, $key ) {
     if ($new_text) {
         if ( askyesno("Save page $title?") ) {
             my $res = $self->api->save( $title, $new_text );
+            $self->set_pages( $self->api->pages );
             display_msg('Saved.');
         }
         else {
