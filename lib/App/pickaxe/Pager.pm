@@ -159,8 +159,6 @@ sub find_next ( $self, $key ) {
           getline( "Find string: ", { history => $self->find_history } );
         return if !$needle;
 
-        $self->find_history->add($needle);
-
         $needle = lc($needle);
         $self->needle($needle);
 
