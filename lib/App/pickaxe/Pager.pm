@@ -38,6 +38,15 @@ has 'index';
 
 has filter_mode => 0;
 
+sub which ($cmd) {
+    for my $path ( split( ':', $ENV{PATH} ) ) {
+        if ( -e "$path/$cmd" ) {
+            return "$path/$cmd";
+        }
+    }
+    return '';
+}
+
 has filter => sub { [ 'pandoc', '-f', 'textile', '-t', 'plain' ] };
 
 has nlines   => 0;
@@ -54,8 +63,8 @@ has 'needle';
 has 'matches';
 
 sub status ($self) {
-    my $base    = $self->state->base_url->clone->query( key => undef );
-    my $title   = $self->state->pages->current->{title};
+    my $base  = $self->state->base_url->clone->query( key => undef );
+    my $title = $self->state->pages->current->{title};
     my $percent;
     if ( $self->nlines == 0 ) {
         $percent = '100';
@@ -80,15 +89,17 @@ sub create_pad ($self) {
     my $text = $self->api->text_for( $self->pages->current->{title} );
 
     if ( $text && $self->filter_mode ) {
-        ## in case run_forked messes with the terminal
-        ## TODO check if pandoc is installed on startup
+        ## in case $self->filter messes with the terminal
         endwin;
-        my $result = run_forked( $self->filter, { child_stdin => encode( 'utf8', $text ) } );
-        if ( $result->{stdout} ) {
+        my $result = run_forked( $self->filter,
+            { child_stdin => encode( 'utf8', $text ) } );
+
+        if ( $result->{exit_code} == 0 ) {
             $text = decode( 'utf8', $result->{stdout} );
         }
         else {
-            display_msg("Can't call pandoc.");
+            display_msg(
+                "Can't call " . $selt->filter . ": " . $result->{stderr} );
         }
     }
 
@@ -118,7 +129,9 @@ sub create_pad ($self) {
 }
 
 sub DESTROY ($self) {
-    $self->pad->delwin;
+    if ( $self->pad ) {
+        $self->pad->delwin;
+    }
 }
 
 sub redraw ( $self, $clear = 0 ) {
@@ -252,6 +265,16 @@ sub set_line ( $self, $new, $clear = 0 ) {
 }
 
 sub toggle_filter_mode ( $self, $key ) {
+
+    ## Enable filter mode only if filter exists
+    if ( !$self->filter_mode ) {
+        my $cmd = $self->filter->[0];
+        if ( !which($cmd) ) {
+            display_msg("$cmd not found.");
+            return;
+        }
+    }
+
     $self->filter_mode( !$self->filter_mode );
     $self->create_pad;
     $self->redraw(1);
