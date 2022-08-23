@@ -99,7 +99,7 @@ sub create_pad ($self) {
         }
         else {
             display_msg(
-                "Can't call " . $selt->filter . ": " . $result->{stderr} );
+                "Can't call " . $self->filter . ": " . $result->{stderr} );
         }
     }
 
