@@ -36,20 +36,20 @@ sub text_for ( $self, $title ) {
     $self->get("wiki/$title.json")->json->{wiki_page}->{text};
 }
 
-sub put ( $self, $path, $text ) {
-    my $url = $self->base_url->clone->path($path);
-    my $res =
-      $self->ua->put( $url => json => { wiki_page => { text => $text } } )
-      ->result;
-    if ( !$res->is_success ) {
-        die $res->message . "\n";
-    }
+sub save ( $self, $title, $text, $version = undef ) {
+    my $url = $self->base_url->clone->path("wiki/$title.json");
+    my $res = $self->ua->put(
+        $url => json => {
+            wiki_page =>
+              { text => $text, ($version ? (version => $version) : () ) }
+        }
+    )->result;
     return $res;
 }
 
 sub delete ( $self, $title ) {
     my $url = $self->base_url->clone->path("wiki/$title.json");
-    my $res = $self->ua->delete( $url )->result;
+    my $res = $self->ua->delete($url)->result;
     if ( !$res->is_success ) {
         die $res->message . "\n";
     }
@@ -58,10 +58,6 @@ sub delete ( $self, $title ) {
 
 sub pages ($self) {
     $self->get("wiki/index.json")->json->{wiki_pages};
-}
-
-sub save ( $self, $title, $text ) {
-    $self->put( "wiki/$title.json", $text );
 }
 
 sub page ( $self, $title ) {
