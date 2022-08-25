@@ -27,7 +27,7 @@ sub read_config {
         }
         elsif ( $cmd eq 'bind' ) {
             my ($map, $key, $function ) = @args;
-            $config->{bind}->{$map}->{$key} = $function;
+            $config->{maps}->{$map}->{$key} = $function;
         }
         else {
             warn "Error in $file, line $.: $cmd: unknown command\n";

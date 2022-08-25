@@ -9,6 +9,7 @@ use App::pickaxe::SelectOption 'select_option', 'askyesno';
 use POSIX 'strftime';
 
 has 'pad';
+has map => 'index';
 
 has pager => sub ($self) {
     App::pickaxe::Pager->new( state => $self->state );

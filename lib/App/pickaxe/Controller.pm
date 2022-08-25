@@ -204,7 +204,10 @@ sub run ($self) {
         my $key = getkey;
         display_msg('');
 
-        if ( my $funcname = $self->bindings->{$key} ) {
+        if ( my $funcname =
+               $self->state->{maps}->{ $self->map }->{$key}
+            || $self->bindings->{$key} )
+        {
             if ( $funcname eq 'quit' ) {
                 last;
             }
