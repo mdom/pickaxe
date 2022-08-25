@@ -7,6 +7,7 @@ use App::pickaxe::Api;
 use App::pickaxe::DisplayMsg 'display_msg';
 use App::pickaxe::SelectOption 'askyesno', 'select_option';
 use App::pickaxe::Getline 'getline';
+use App::pickaxe::Keys 'getkey';
 use Algorithm::Diff;
 
 has maxlines => sub { $LINES - 3 };
@@ -200,7 +201,7 @@ sub redraw ($self) {
 sub run ($self) {
     $self->redraw;
     while (1) {
-        my $key = getchar;
+        my $key = getkey;
         display_msg('');
 
         if ( my $funcname = $self->bindings->{$key} ) {
