@@ -168,9 +168,14 @@ sub delete_page ( $self, $key ) {
     display_msg "There are no pages." if !$self->pad;
     my $title = $self->pages->current->{title};
     if ( askyesno("Delete page $title?") ) {
-        $self->api->delete($title);
+        my $error = $self->api->delete($title);
         $self->set_pages( $self->api->pages );
-        display_msg("Deleted.");
+        if ( $error ) {
+            display_msg("Error: $error");
+        }
+        else {
+            display_msg("Deleted.");
+        }
     }
 }
 
