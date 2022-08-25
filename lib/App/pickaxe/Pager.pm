@@ -205,13 +205,13 @@ sub find_next ( $self, $key ) {
     }
 
     if ( @{ $self->matches } == 1 ) {
-        $self->set_line( $self->matches->[0]->[0] );
+        $self->set_line( $self->matches->[0]->[0], 1 );
     }
     elsif ( @{ $self->matches } > 1 ) {
         while (1) {
             my $match = cycle_shift( $self->matches );
             if ( $match->[0] != $self->current_line ) {
-                $self->set_line( $match->[0] );
+                $self->set_line( $match->[0], 1 );
                 last;
             }
         }
