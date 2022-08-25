@@ -33,6 +33,10 @@ sub current ($self) {
     $self->array->[ $self->pos ];
 }
 
+sub set ( $self, $elt ) {
+    $self->array->[ $self->pos ] = $elt;
+}
+
 sub rewind ($self) {
     $self->seek(0);
 }
