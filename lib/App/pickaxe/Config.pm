@@ -2,6 +2,8 @@ package App::pickaxe::Config;
 use Mojo::Base -signatures, 'Exporter';
 use Mojo::Util 'decode';
 use Mojo::File 'path';
+use Text::ParseWords 'shellwords';
+use Curses;
 
 our @EXPORT_OK = 'read_config';
 
@@ -11,13 +13,36 @@ sub read_config {
     if ( !-e $file ) {
         return {};
     }
-    my $content = decode( 'UTF-8', path($file)->slurp );
-    my $config =
-      eval "package Sandbox; no warnings;use Mojo::Base -strict; $content";
-
-    die qq{Can't load configuration from file "$file" : $@;} if $@;
-    die qq{Configuration file "$file" did not return a hash reference}
-      unless ref $config eq 'HASH';
-
+    my $path = path($file);
+    my $handle = $path->open('<:encoding(UTF-8)');
+    my $has_errors;
+    my $config = {};
+    while (<$handle>) {
+        chomp;
+        s/#.*$//;
+        my ($cmd, @args ) = shellwords($_);
+        if ( $cmd eq 'set' ) {
+            my ($key, $value) = @args;
+            $config->{$args[0]} = $args[1];
+        }
+        elsif ( $cmd eq 'bind' ) {
+            my ($map, $key, $function ) = @args;
+            $config->{bind}->{$map}->{$key} = $function;
+        }
+        else {
+            warn "Error in $file, line $.: $cmd: unknown command\n";
+            $has_errors++;
+        }
+    }
+    if ( $has_errors ) {
+        say "Press any key to continue...";
+        <STDIN>;
+    }
     return $config;
 }
+__END__
+
+set url "http://taz.de"
+set project abt_edv_wiki
+bind editor ^C foo_bar
+set pass_cmd "pass mdom@taz.de"
