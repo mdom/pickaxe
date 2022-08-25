@@ -1,23 +1,27 @@
 package App::pickaxe::Getline;
 use Mojo::Base -signatures, 'Exporter';
+use App::pickaxe::Keys 'getkey';
 use Curses;
 
 our @EXPORT_OK = qw(getline);
 
 my %getline_bindings = (
-    Curses::KEY_BACKSPACE => 'backward_delete_character',
-    Curses::KEY_LEFT      => 'backward_char',
-    Curses::KEY_RIGHT     => 'forward_char',
-    Curses::KEY_UP        => 'prev_history',
-    Curses::KEY_DOWN      => 'next_history',
-    "\cp"                 => 'prev_history',
-    "\cn"                 => 'next_history',
-    "\cA"                 => 'beginning_of_line',
-    "\cE"                 => 'end_of_line',
-    "\cD"                 => 'delete_character',
-    "\cK"                 => 'kill_line',
-    "\cG"                 => 'abort',
-    "\n"                  => 'accept_line',
+    '<Backspace>'     => 'backward_delete_character',
+    '<Left>'          => 'backward_char',
+    '<Right>'         => 'forward_char',
+    '<Up>'            => 'prev_history',
+    '<Down>'          => 'next_history',
+    "^P"              => 'prev_history',
+    "^N"              => 'next_history',
+    "^A"              => 'beginning_of_line',
+    "^E"              => 'end_of_line',
+    "^D"              => 'delete_character',
+    "^K"              => 'kill_line',
+    "^G"              => 'abort',
+    "<Return>"        => 'accept_line',
+    "<Esc>d"           => 'kill_word',
+    "<Esc><Backspace>" => 'backward_kill_word',
+    "<Esc>\\"          => 'delete_horizontal_space',
 );
 
 my $buffer = '';
@@ -32,7 +36,7 @@ sub getline ( $prompt, $options = {} ) {
     $cursor = length($buffer);
 
     $history_index = 0;
-    @history = @{ $options->{history} || [] } ;
+    @history       = @{ $options->{history} || [] };
     unshift @history, $buffer;
 
     clrtoeol;
@@ -41,7 +45,8 @@ sub getline ( $prompt, $options = {} ) {
     chgat( $LINES - 1, $cursor + length($prompt), 1, A_REVERSE, 0, 0 );
     refresh;
     while (1) {
-        my $key      = getchar;
+        my $key = getkey;
+
         my $funcname = $getline_bindings{$key} || 'self_insert';
         if ( $funcname eq 'accept_line' ) {
             last;
@@ -135,6 +140,23 @@ sub prev_history {
     $history_index = $history_index + 1 >= @history ? 0 : $history_index + 1;
     $buffer        = $history[$history_index];
     $cursor        = length($buffer);
+}
+
+sub kill_word {
+    substr( $buffer, $cursor ) =~ s/\s*\S+//;
+}
+
+sub backward_kill_word {
+    substr( $buffer, 0, $cursor ) =~ s/\S+\s*$//;
+    $cursor = length($buffer);
+}
+
+sub delete_horizontal_space {
+    substr( $buffer, $cursor ) =~ s/^\s+//;
+    substr( $buffer, 0, $cursor ) =~ s/(\s+)$//;
+    if ($1) {
+        $cursor -= length($1);
+    }
 }
 
 1;
