@@ -10,6 +10,8 @@ my $CLEAR = 1;
 
 has help_summary => "q:Quit e:Edit /:find o:Open %:Preview ?:help";
 
+has map => 'pager';
+
 has bindings => sub {
     return {
         'q'           => 'quit',
