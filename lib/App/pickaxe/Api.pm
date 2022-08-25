@@ -1,3 +1,4 @@
+## Please see file perltidy.ERR
 package App::pickaxe::Api;
 use Mojo::Base -signatures, -base;
 use Mojo::UserAgent;
@@ -33,21 +34,29 @@ sub url_for ( $self, $title ) {
 }
 
 sub text_for ( $self, $title ) {
-    $self->page($title)->json->{wiki_page}->{text};
+    $self->page($title)->{text};
 }
 
 sub save ( $self, $title, $text, $version = undef ) {
     my $url = $self->base_url->clone->path("wiki/$title.json");
+
     my $res = $self->ua->put(
         $url => json => {
             wiki_page =>
-              { text => $text, ($version ? (version => $version) : () ) }
+              { text => $text, ( $version ? ( version => $version ) : () ) }
         }
     )->result;
-    if ( !$res->is_success && $res->code != 409) {
-      die( 'Error saving wiki page: ' . $res->message );
+
+    if ( $res->is_success ) {
+        return 1;
     }
-    return $res;
+    elsif ( $res->code == 409 ) {
+        return 0;
+    }
+    else {
+        die( 'Error saving wiki page: ' . $res->message );
+    }
+
 }
 
 sub delete ( $self, $title ) {
@@ -56,7 +65,7 @@ sub delete ( $self, $title ) {
     if ( !$res->is_success ) {
         die $res->message . "\n";
     }
-    return $res;
+    return;
 }
 
 sub pages ($self) {
@@ -64,7 +73,7 @@ sub pages ($self) {
 }
 
 sub page ( $self, $title ) {
-    $self->get("wiki/$title.json");
+    $self->get("wiki/$title.json")->json->{wiki_page};
 }
 
 sub search ( $self, $query ) {

@@ -35,7 +35,7 @@ sub create_page ( $self, $key ) {
 
     if ($new_text) {
         if ( askyesno("Save page $title?") ) {
-            my $res = $self->api->save( $title, $new_text );
+            $self->api->save( $title, $new_text );
             $self->set_pages( $self->api->pages );
             display_msg('Saved.');
         }
@@ -50,11 +50,10 @@ sub create_page ( $self, $key ) {
 
 sub save_page ( $self, $title, $new_text, $version = undef ) {
     while (1) {
-        my $res = $self->api->save( $title, $new_text, $version );
-        if ( $res->is_success ) {
+        if ( $self->api->save( $title, $new_text, $version )) {
             display_msg('Saved.');
         }
-        elsif ( $res->code == 409 ) {
+        else {
             my $option =
               select_option( 'Conflict detected', qw(Edit Abort Overwrite) );
             if ( $option eq 'edit' ) {
@@ -77,15 +76,17 @@ sub save_page ( $self, $title, $new_text, $version = undef ) {
     }
 }
 
+sub update_current_page ($self) {
+    $self->state->pages->set(
+        $self->api->page( $self->state->pages->current->{title} ) );
+}
+
 sub edit_page ( $self, $key ) {
+    $self->update_current_page;
     my $title   = $self->state->pages->current->{title};
     my $version = $self->state->pages->current->{version};
-    my $res     = $self->api->page($title);
-    if ( !$res->is_success ) {
-        $self->display_msg( "Can't retrieve $title: " . $res->msg );
-        return;
-    }
-    my $text = $res->json->{wiki_page}->{text};
+    my $text    = $self->state->pages->current->{text};
+
     $text =~ s/\r//g;
     my $tempfile = tempfile;
     $tempfile->spurt( encode( 'utf8', $text ) );
@@ -102,15 +103,11 @@ sub edit_page ( $self, $key ) {
     else {
         display_msg('Discard unmodified page.');
     }
+    $self->update_current_page;
 }
 
 sub handle_conflict ( $self, $title, $old_text ) {
-    my $res = $self->api->page($title);
-    if ( !$res->is_success ) {
-        $self->display_msg( "Can't retrieve $title: " . $res->msg );
-        return;
-    }
-    my $page     = $res->json->{wiki_page};
+    my $page = $self->api->page($title);
     my $new_text = $page->{text};
     $new_text =~ s/\r//g;
     my $version = $page->{version};
