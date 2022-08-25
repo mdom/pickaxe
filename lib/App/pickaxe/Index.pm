@@ -205,32 +205,24 @@ sub find_next ( $self, $key ) {
     return;
 }
 
+my %sort_options = (
+    updated => 'updated_on',
+    created => 'created_on',
+    title => 'title',
+);
+
 sub set_order ( $self, $key ) {
-    my $order = select_option(
-        'Sort Updated/Created/Title?: ',
-        {
-            u => 'updated_on',
-            c => 'created_on',
-            t => 'title',
-        }
-    );
+    my $order = select_option('Sort', qw(Updated Created Title));
     if ($order) {
-        $self->order($order);
+        $self->order($sort_options{$order});
         $self->set_pages( $self->pages->array );
     }
 }
 
 sub set_reverse_order ( $self, $key ) {
-    my $order = select_option(
-        'Rev-Sort Updated/Created/Title?: ',
-        {
-            u => 'updated_on',
-            c => 'created_on',
-            t => 'title',
-        }
-    );
+    my $order = select_option('Rev-Sort', qw(Updated Created Title));
     if ($order) {
-        $self->order("reverse_$order");
+        $self->order("reverse_$sort_options{$order}");
         $self->set_pages( $self->pages->array );
     }
 }

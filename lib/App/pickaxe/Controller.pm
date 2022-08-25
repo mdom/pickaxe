@@ -55,10 +55,8 @@ sub save_page ( $self, $title, $new_text, $version = undef ) {
             display_msg('Saved.');
         }
         elsif ( $res->code == 409 ) {
-            my $option = select_option(
-                'Conflict detected. Edit diff/Abort/Overwrite?: ',
-                { e => 'edit', a => 'abort', o => 'overwrite' }
-            );
+            my $option =
+              select_option( 'Conflict detected', qw(Edit Abort Overwrite) );
             if ( $option eq 'edit' ) {
                 ( $new_text, $version ) =
                   $self->handle_conflict( $title, $new_text );
@@ -138,10 +136,8 @@ sub handle_conflict ( $self, $title, $old_text ) {
     while (1) {
         $resolved_text = $self->call_editor($tempfile);
         if ( $resolved_text =~ /^(?:\+|\-)/sm ) {
-            my $option = select_option(
-                'Unresolved conflicts. Edit/Abort?:',
-                { e => 'edit', a => 'abort' }
-            );
+            my $option =
+              select_option( 'Unresolved conflicts', qw(Edit Abort) );
             if ( $option eq 'edit' ) {
                 next;
             }
