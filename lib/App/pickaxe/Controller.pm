@@ -31,6 +31,10 @@ sub create_page ( $self, $key ) {
         display_msg("Aborted.");
         return;
     }
+    if ( $self->api->page($title) ) {
+        display_msg("Title has already been taken.");
+        return;
+    }
     my $new_text = $self->call_editor(tempfile);
 
     if ($new_text) {
@@ -50,7 +54,7 @@ sub create_page ( $self, $key ) {
 
 sub save_page ( $self, $title, $new_text, $version = undef ) {
     while (1) {
-        if ( $self->api->save( $title, $new_text, $version )) {
+        if ( $self->api->save( $title, $new_text, $version ) ) {
             display_msg('Saved.');
         }
         else {
@@ -107,7 +111,7 @@ sub edit_page ( $self, $key ) {
 }
 
 sub handle_conflict ( $self, $title, $old_text ) {
-    my $page = $self->api->page($title);
+    my $page     = $self->api->page($title);
     my $new_text = $page->{text};
     $new_text =~ s/\r//g;
     my $version = $page->{version};

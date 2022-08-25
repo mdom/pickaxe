@@ -1,4 +1,3 @@
-## Please see file perltidy.ERR
 package App::pickaxe::Api;
 use Mojo::Base -signatures, -base;
 use Mojo::UserAgent;
@@ -15,15 +14,6 @@ sub get ( $self, $path, %parameters ) {
         $self->ua->get( $url => { 'Content-Type' => 'application/json' } )
           ->result;
     };
-    if ($@) {
-        $@ =~ s/ at .*//;
-        $@ =~ s/\s*$//;
-        die("$@\n");
-    }
-
-    if ( !$res->is_success ) {
-        die( $res->message . "\n" );
-    }
     return $res;
 }
 
@@ -63,17 +53,25 @@ sub delete ( $self, $title ) {
     my $url = $self->base_url->clone->path("wiki/$title.json");
     my $res = $self->ua->delete($url)->result;
     if ( !$res->is_success ) {
-        die $res->message . "\n";
+        return $res->message;
     }
     return;
 }
 
 sub pages ($self) {
-    $self->get("wiki/index.json")->json->{wiki_pages};
+    my $res = $self->get("wiki/index.json");
+    if ( $res->is_success ) {
+        return $res->json->{wiki_pages};
+    }
+    return [];
 }
 
 sub page ( $self, $title ) {
-    $self->get("wiki/$title.json")->json->{wiki_page};
+    my $res = $self->get("wiki/$title.json");
+    if ( $res->is_success ) {
+        return $res->json->{wiki_page};
+    }
+    return;
 }
 
 sub search ( $self, $query ) {
