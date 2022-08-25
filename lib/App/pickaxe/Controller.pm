@@ -25,7 +25,7 @@ sub open_in_browser ( $self, $key ) {
     IPC::Cmd::run( command => [ 'xdg-open', $self->api->url_for($title) ] );
 }
 
-sub create_page ( $self, $key ) {
+sub add_page ( $self, $key ) {
     my $title = getline( "Page name: ", { history => $self->find_history } );
     if ( !$title ) {
         display_msg("Aborted.");

@@ -15,7 +15,7 @@ has pager => sub ($self) {
 };
 
 has help_summary =>
-  "q:Quit w:New e:Edit s:Search /:find b:Browse o:Order D:delete ?:help";
+  "q:Quit a:Add e:Edit s:Search /:find b:Browse o:Order D:delete ?:help";
 
 has 'order' => 'reverse_updated_on';
 
@@ -28,7 +28,7 @@ has bindings => sub {
         j                 => 'next_item',
         k                 => 'prev_item',
         e                 => 'edit_page',
-        w                 => 'create_page',
+        a                 => 'add_page',
         b                 => 'open_in_browser',
         "\n"              => 'view_page',
         Curses::KEY_NPAGE => 'next_page',
