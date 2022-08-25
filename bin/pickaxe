@@ -17,6 +17,7 @@ use App::pickaxe::Config 'read_config';
 use Curses;
 
 our $VERSION = '0.01';
+my $config = read_config;
 
 initscr;
 keypad( stdscr, 1 );
@@ -24,8 +25,6 @@ noecho;
 curs_set(0);
 
 my $url = shift;
-
-my $config = read_config;
 
 if ( $url ) {
     $config->{base_url} = $url;
