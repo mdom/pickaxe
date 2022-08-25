@@ -21,41 +21,41 @@ has 'order' => 'reverse_updated_on';
 
 has bindings => sub {
     return {
-        Curses::KEY_END   => 'last_item',
-        Curses::KEY_HOME  => 'first_item',
-        Curses::KEY_DOWN  => 'next_item',
-        Curses::KEY_UP    => 'prev_item',
-        j                 => 'next_item',
-        k                 => 'prev_item',
-        e                 => 'edit_page',
-        a                 => 'add_page',
-        b                 => 'open_in_browser',
-        "\n"              => 'view_page',
-        Curses::KEY_NPAGE => 'next_page',
-        Curses::KEY_PPAGE => 'prev_page',
-        Curses::KEY_LEFT  => 'prev_page',
-        Curses::KEY_RIGHT => 'next_page',
-        ' '               => 'next_page',
-        s                 => 'search',
-        o                 => 'set_order',
-        O                 => 'set_reverse_order',
-        D                 => 'delete_page',
-        '/'               => 'find',
-        'n'               => 'find_next',
-        'p'               => 'find_next',
-        '?'               => 'display_help',
-        '$'               => 'update_pages',
-        q                 => 'quit',
-        1                 => 'jump',
-        2                 => 'jump',
-        3                 => 'jump',
-        4                 => 'jump',
-        5                 => 'jump',
-        6                 => 'jump',
-        7                 => 'jump',
-        8                 => 'jump',
-        9                 => 'jump',
-        0                 => 'jump',
+        '<End>'      => 'last_item',
+        '<Home>'     => 'first_item',
+        '<Down>'     => 'next_item',
+        '<Up>'       => 'prev_item',
+        j            => 'next_item',
+        k            => 'prev_item',
+        e            => 'edit_page',
+        a            => 'add_page',
+        b            => 'open_in_browser',
+        '<Return>'   => 'view_page',
+        '<PageDown>' => 'next_page',
+        '<PageUp>'   => 'prev_page',
+        '<Left>'     => 'prev_page',
+        '<Right>'    => 'next_page',
+        '<Space>'    => 'next_page',
+        s            => 'search',
+        o            => 'set_order',
+        O            => 'set_reverse_order',
+        D            => 'delete_page',
+        '/'          => 'find',
+        'n'          => 'find_next',
+        'p'          => 'find_next',
+        '?'          => 'display_help',
+        '$'          => 'update_pages',
+        q            => 'quit',
+        1            => 'jump',
+        2            => 'jump',
+        3            => 'jump',
+        4            => 'jump',
+        5            => 'jump',
+        6            => 'jump',
+        7            => 'jump',
+        8            => 'jump',
+        9            => 'jump',
+        0            => 'jump',
     };
 };
 
@@ -170,7 +170,7 @@ sub delete_page ( $self, $key ) {
     if ( askyesno("Delete page $title?") ) {
         my $error = $self->api->delete($title);
         $self->set_pages( $self->api->pages );
-        if ( $error ) {
+        if ($error) {
             display_msg("Error: $error");
         }
         else {
@@ -213,19 +213,19 @@ sub find_next ( $self, $key ) {
 my %sort_options = (
     updated => 'updated_on',
     created => 'created_on',
-    title => 'title',
+    title   => 'title',
 );
 
 sub set_order ( $self, $key ) {
-    my $order = select_option('Sort', qw(Updated Created Title));
+    my $order = select_option( 'Sort', qw(Updated Created Title) );
     if ($order) {
-        $self->order($sort_options{$order});
+        $self->order( $sort_options{$order} );
         $self->set_pages( $self->pages->array );
     }
 }
 
 sub set_reverse_order ( $self, $key ) {
-    my $order = select_option('Rev-Sort', qw(Updated Created Title));
+    my $order = select_option( 'Rev-Sort', qw(Updated Created Title) );
     if ($order) {
         $self->order("reverse_$sort_options{$order}");
         $self->set_pages( $self->pages->array );
