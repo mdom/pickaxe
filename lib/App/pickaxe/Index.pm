@@ -2,7 +2,7 @@ package App::pickaxe::Index;
 use Mojo::Base -signatures, 'App::pickaxe::Controller';
 use Curses;
 use App::pickaxe::Pager;
-use App::pickaxe::ArrayIterator;
+use App::pickaxe::Pages;
 use App::pickaxe::Getline 'getline';
 use App::pickaxe::DisplayMsg 'display_msg';
 use App::pickaxe::SelectOption 'select_option', 'askyesno';
@@ -10,9 +10,11 @@ use POSIX 'strftime';
 
 has 'pad';
 has map => 'index';
+has 'config';
+has pages => sub { App::pickaxe::Pages->new; };
 
 has pager => sub ($self) {
-    App::pickaxe::Pager->new( state => $self->state );
+    App::pickaxe::Pager->new( pages => $self->pages, config => $self->config  );
 };
 
 has help_summary =>
@@ -64,13 +66,13 @@ has index_time_format => "%Y-%m-%d %H:%M:%S";
 has index_format      => '%4n %-22u %t';
 
 sub status ($self) {
-    my $base = $self->state->base_url->clone->query( key => undef );
+    my $base = $self->config->{base_url}->clone->query( key => undef );
     return "pickaxe: $base";
 }
 
 sub select ( $self, $new ) {
     return if !$self->pad;
-    my $pages = $self->state->pages;
+    my $pages = $self->pages;
     $pages->seek($new);
 
     if ( $pages->oldpos != $pages->pos ) {
@@ -131,7 +133,7 @@ sub compile_index_format ($self) {
 }
 
 sub create_pad ($self) {
-    my $pages = $self->state->pages;
+    my $pages = $self->pages;
     if ( !$pages->count ) {
         return;
     }
@@ -152,7 +154,7 @@ sub create_pad ($self) {
 
 sub update_pad ( $self, $clear ) {
     return if !$self->pad;
-    my $pages = $self->state->pages;
+    my $pages = $self->pages;
     $self->pad->chgat( $pages->pos, 0, -1, A_REVERSE, 0, 0 );
 
     my $offset = int( $pages->pos / $self->maxlines ) * $self->maxlines;
@@ -259,7 +261,7 @@ sub view_page ( $self, $key ) {
 
 sub prev_page ( $self, $key ) {
     return if !$self->pad;
-    my $pages = $self->state->pages;
+    my $pages = $self->pages;
     my $last_item_on_page =
       int( $pages->pos / $self->maxlines ) * $self->maxlines - 1;
     if ( $last_item_on_page < 0 ) {
@@ -276,12 +278,12 @@ sub first_item_on_page ( $self, $selected ) {
 
 sub next_item ( $self, $key ) {
     return if !$self->pad;
-    $self->select( $self->state->pages->pos + 1 );
+    $self->select( $self->pages->pos + 1 );
 }
 
 sub prev_item ( $self, $key ) {
     return if !$self->pad;
-    $self->select( $self->state->pages->pos - 1 );
+    $self->select( $self->pages->pos - 1 );
 }
 
 sub first_item ( $self, $key ) {
@@ -291,7 +293,7 @@ sub first_item ( $self, $key ) {
 
 sub last_item ( $self, $key ) {
     return if !$self->pad;
-    $self->select( $self->state->pages->count - 1 );
+    $self->select( $self->pages->count - 1 );
 }
 
 sub next_page ( $self, $key ) {
@@ -316,7 +318,7 @@ sub set_pages ( $self, $pages ) {
         $pages = [ reverse @$pages ];
     }
 
-    $self->state->pages( App::pickaxe::ArrayIterator->new( array => $pages ) );
+    $self->pages->replace( $pages );
     if ( $self->pad ) {
         $self->pad->delwin;
     }

@@ -11,7 +11,6 @@
 use Mojo::Base -strict, -signatures;
 use Mojo::UserAgent;
 use App::pickaxe::Index;
-use App::pickaxe::State;
 use App::pickaxe::Config 'read_config';
 
 use Curses;
@@ -33,9 +32,8 @@ if ( $url ) {
 if ( $config->{base_url} ) {
     $config->{base_url} = Mojo::URL->new($config->{base_url});
 }
-my $state = App::pickaxe::State->new( $config );
 
-eval { App::pickaxe::Index->new( state => $state )->run };
+eval { App::pickaxe::Index->new( config => $config )->run };
 
 my $err;
 if ($@) {

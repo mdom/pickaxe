@@ -1,4 +1,4 @@
-package App::pickaxe::ArrayIterator;
+package App::pickaxe::Pages;
 use Mojo::Base -signatures, -base;
 
 has array  => sub { [] };
@@ -15,6 +15,12 @@ sub seek ( $self, $offset ) {
         $self->pos( @{ $self->array } - 1 );
     }
     return;
+}
+
+sub replace ($self, $pages) {
+    $self->array( $pages );
+    $self->pos(0);
+    $self->oldpos(0);
 }
 
 sub next ($self) {
