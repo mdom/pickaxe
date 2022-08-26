@@ -11,6 +11,8 @@ my $CLEAR = 1;
 has help_summary => "q:Quit e:Edit /:find o:Open %:Preview ?:help";
 
 has map => 'pager';
+has 'config';
+has 'pages';
 
 has bindings => sub {
     return {
@@ -38,8 +40,6 @@ has bindings => sub {
 
 has 'index';
 
-has filter_mode => 0;
-
 sub which ($cmd) {
     for my $path ( split( ':', $ENV{PATH} ) ) {
         if ( -e "$path/$cmd" ) {
@@ -48,8 +48,6 @@ sub which ($cmd) {
     }
     return '';
 }
-
-has filter => sub { [ 'pandoc', '-f', 'textile', '-t', 'plain' ] };
 
 has nlines   => 0;
 has ncolumns => 0;
@@ -65,8 +63,8 @@ has 'needle';
 has 'matches';
 
 sub status ($self) {
-    my $base  = $self->state->base_url->clone->query( key => undef );
-    my $title = $self->state->pages->current->{title};
+    my $base  = $self->config->{base_url}->clone->query( key => undef );
+    my $title = $self->pages->current->{title};
     my $percent;
     if ( $self->nlines == 0 ) {
         $percent = '100';
@@ -90,18 +88,21 @@ sub create_pad ($self) {
     my $cols = $COLS;
     my $text = $self->api->text_for( $self->pages->current->{title} );
 
-    if ( $text && $self->filter_mode ) {
+    my $filter_cmd = $self->config->{filter_cmd};
+    my $filter_mode = $self->config->{filter_mode};
+    if ( $text && $filter_mode eq 'yes' && @$filter_cmd ) {
+
         ## in case $self->filter messes with the terminal
         endwin;
-        my $result = run_forked( $self->filter,
-            { child_stdin => encode( 'utf8', $text ) } );
+        my $result =
+          run_forked( $filter_cmd, { child_stdin => encode( 'utf8', $text ) } );
 
         if ( $result->{exit_code} == 0 ) {
             $text = decode( 'utf8', $result->{stdout} );
         }
         else {
             display_msg(
-                "Can't call " . $self->filter . ": " . $result->{stderr} );
+                "Can't call " . $filter_cmd->[0] . ": " . $result->{stderr} );
         }
     }
 
@@ -267,20 +268,23 @@ sub set_line ( $self, $new, $clear = 0 ) {
 }
 
 sub toggle_filter_mode ( $self, $key ) {
+    my $config = $self->config;
 
-    ## Enable filter mode only if filter exists
-    if ( !$self->filter_mode ) {
-        my $cmd = $self->filter->[0];
+    if ( $config->{filter_mode} eq 'no' ) {
+        my $cmd = $config->{filter_cmd}->[0];
         if ( !which($cmd) ) {
             display_msg("$cmd not found.");
             return;
         }
+        $config->{filter_mode} = 'yes';
+    }
+    else {
+        $config->{filter_mode} = 'no';
     }
 
-    $self->filter_mode( !$self->filter_mode );
     $self->create_pad;
     $self->redraw(1);
-    if ( $self->filter_mode ) {
+    if ( $config->{filter_mode} eq 'yes' ) {
         display_msg('Filter mode enabled.');
     }
     else {

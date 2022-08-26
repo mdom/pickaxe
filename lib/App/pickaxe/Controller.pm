@@ -12,18 +12,18 @@ use Algorithm::Diff;
 
 has maxlines => sub { $LINES - 3 };
 
-has api => sub { App::pickaxe::Api->new( base_url => shift->state->base_url ) };
-
-has 'state';
-
-sub pages {
-    shift->state->pages;
-}
+has api => sub { App::pickaxe::Api->new( base_url => shift->config->{base_url} ) };
 
 sub open_in_browser ( $self, $key ) {
     use IPC::Cmd;
-    my $title = $self->state->pages->current->{title};
+    my $title = $self->pages->current->{title};
     IPC::Cmd::run( command => [ 'xdg-open', $self->api->url_for($title) ] );
+}
+
+sub dump ($self, $data) {
+    endwin;
+    use Data::Dumper;
+    die Dumper $data;
 }
 
 sub add_page ( $self, $key ) {
@@ -82,15 +82,15 @@ sub save_page ( $self, $title, $new_text, $version = undef ) {
 }
 
 sub update_current_page ($self) {
-    $self->state->pages->set(
-        $self->api->page( $self->state->pages->current->{title} ) );
+    $self->pages->set(
+        $self->api->page( $self->pages->current->{title} ) );
 }
 
 sub edit_page ( $self, $key ) {
     $self->update_current_page;
-    my $title   = $self->state->pages->current->{title};
-    my $version = $self->state->pages->current->{version};
-    my $text    = $self->state->pages->current->{text};
+    my $title   = $self->pages->current->{title};
+    my $version = $self->pages->current->{version};
+    my $text    = $self->pages->current->{text};
 
     $text =~ s/\r//g;
     my $tempfile = tempfile;
@@ -205,7 +205,7 @@ sub run ($self) {
         display_msg('');
 
         if ( my $funcname =
-               $self->state->{maps}->{ $self->map }->{$key}
+               $self->config->{maps}->{ $self->map }->{$key}
             || $self->bindings->{$key} )
         {
             if ( $funcname eq 'quit' ) {
@@ -224,13 +224,23 @@ sub run ($self) {
 }
 
 sub query_connection_details ($self) {
-    if ( $ENV{REDMINE_APIKEY} ) {
-        $self->state->base_url->query( key => $ENV{REDMINE_APIKEY} );
+    my $apikey = $self->config->{apikey} || $ENV{REDMINE_APIKEY};
+    if ( $apikey ) {
+        $self->config->{base_url}->query( key => $apikey );
     }
     else {
-        my $username = getline("Username: ");
-        my $password = getline( "Password: ", { password => 1 } );
-        $self->state->base_url->userinfo("$username:$password");
+        my $username = $self->config->{username} || getline("Username: ");
+        my $password;
+        if ( @{$self->config->{pass_cmd}}) {
+            endwin;
+            my $cmd = "@{$self->config->{pass_cmd}}";
+            $password = qx($cmd);
+            chomp($password);
+        }
+        else {
+            $password = $self->config->{password} || getline( "Password: ", { password => 1 } );
+        }
+        $self->config->{base_url}->userinfo("$username:$password");
     }
 }
 
