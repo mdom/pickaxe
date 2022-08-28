@@ -11,26 +11,27 @@
 use Mojo::Base -strict, -signatures;
 use Mojo::UserAgent;
 use App::pickaxe::Index;
-use App::pickaxe::Config 'read_config';
+use App::pickaxe::Config;
 
 use Curses;
 
 our $VERSION = '0.01';
-my $config = read_config;
+
+## Read config before the screen is initialized
+## Config can write to stderr
+my $config = App::pickaxe::Config->new;
 
 initscr;
 keypad( stdscr, 1 );
 noecho;
 curs_set(0);
 
+$SIG{__WARN__} = sub { die @_ };
+
 my $url = shift;
 
 if ( $url ) {
-    $config->{base_url} = $url;
-}
-
-if ( $config->{base_url} ) {
-    $config->{base_url} = Mojo::URL->new($config->{base_url});
+    $config->base_url( $url );
 }
 
 eval { App::pickaxe::Index->new( config => $config )->run };

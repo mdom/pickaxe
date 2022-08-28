@@ -35,6 +35,8 @@ has bindings => sub {
         'n'           => 'find_next',
         '<Backslash>' => 'find_toggle',
         o             => 'open_in_browser',
+        J => 'next_item',
+        K => 'prev_item',
     };
 };
 
@@ -75,6 +77,22 @@ sub status ($self) {
     return "pickaxe: $base $title", sprintf( "--%3d%%", $percent );
 }
 
+sub next_item ( $self, $key ) {
+    my $prev = $self->pages->current;
+    $self->pages->next;
+    if ( $prev != $self->pages->current ) {
+        $self->create_pad;
+    }
+}
+
+sub prev_item ( $self, $key ) {
+    my $prev = $self->pages->current;
+    $self->pages->prev;
+    if ( $prev != $self->pages->current ) {
+        $self->create_pad;
+    }
+}
+
 sub edit_page ( $self, $key ) {
     $self->SUPER::edit_page($key);
     $self->create_pad;
@@ -88,12 +106,9 @@ sub create_pad ($self) {
     my $cols = $COLS;
     my $text = $self->api->text_for( $self->pages->current->{title} );
 
-    my $filter_cmd = $self->config->{filter_cmd};
-    my $filter_mode = $self->config->{filter_mode};
+    my $filter_cmd = $self->config->filter_cmd;
+    my $filter_mode = $self->config->filter_mode;
     if ( $text && $filter_mode eq 'yes' && @$filter_cmd ) {
-
-        ## in case $self->filter messes with the terminal
-        endwin;
         my $result =
           run_forked( $filter_cmd, { child_stdin => encode( 'utf8', $text ) } );
 
@@ -111,6 +126,8 @@ sub create_pad ($self) {
     $self->nlines( @lines + 0 );
     $self->lines( \@lines );
     $self->current_line(0);
+    $self->current_column(0);
+
     $self->matches( [] );
 
     for my $line (@lines) {
@@ -129,6 +146,7 @@ sub create_pad ($self) {
         $x++;
     }
     $self->pad($pad);
+    $self->redraw(1);
 }
 
 sub DESTROY ($self) {
@@ -270,20 +288,19 @@ sub set_line ( $self, $new, $clear = 0 ) {
 sub toggle_filter_mode ( $self, $key ) {
     my $config = $self->config;
 
-    if ( $config->{filter_mode} eq 'no' ) {
-        my $cmd = $config->{filter_cmd}->[0];
+    if ( $config->filter_mode eq 'no' ) {
+        my $cmd = $config->filter_cmd->[0];
         if ( !which($cmd) ) {
             display_msg("$cmd not found.");
             return;
         }
-        $config->{filter_mode} = 'yes';
+        $config->filter_mode('yes');
     }
     else {
-        $config->{filter_mode} = 'no';
+        $config->filter_mode('no');
     }
 
     $self->create_pad;
-    $self->redraw(1);
     if ( $config->{filter_mode} eq 'yes' ) {
         display_msg('Filter mode enabled.');
     }
@@ -318,8 +335,6 @@ sub bottom ( $self, $key ) {
 
 sub run ($self) {
     $self->create_pad;
-    clear;
-    $self->redraw;
     $self->SUPER::redraw;
     $self->SUPER::run;
 }

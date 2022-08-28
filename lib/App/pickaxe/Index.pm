@@ -70,14 +70,22 @@ sub status ($self) {
     return "pickaxe: $base";
 }
 
+sub remove_selection ($self) {
+    $self->pad->chgat( $self->pages->pos, 0, -1, A_NORMAL, 0, 0 );
+}
+
+sub add_selection ( $self ) {
+    $self->pad->chgat( $self->pages->pos, 0, -1, A_REVERSE, 0, 0 );
+}
+
 sub select ( $self, $new ) {
     return if !$self->pad;
     my $pages = $self->pages;
+    if ( $new != $pages->pos ) {
+        $self->remove_selection;
+    }
     $pages->seek($new);
 
-    if ( $pages->oldpos != $pages->pos ) {
-        $self->pad->chgat( $pages->oldpos, 0, -1, A_NORMAL, 0, 0 );
-    }
     my $clear =
       $self->first_item_on_page( $pages->oldpos ) !=
       $self->first_item_on_page( $pages->pos );
@@ -155,7 +163,7 @@ sub create_pad ($self) {
 sub update_pad ( $self, $clear ) {
     return if !$self->pad;
     my $pages = $self->pages;
-    $self->pad->chgat( $pages->pos, 0, -1, A_REVERSE, 0, 0 );
+    $self->add_selection;
 
     my $offset = int( $pages->pos / $self->maxlines ) * $self->maxlines;
     if ($clear) {
@@ -253,6 +261,7 @@ sub jump ( $self, $key ) {
 
 sub view_page ( $self, $key ) {
     return if !$self->pad;
+    $self->remove_selection;
     $self->pager->run;
     $self->update_pad(1);
     $self->update_statusbar;
