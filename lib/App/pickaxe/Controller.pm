@@ -223,6 +223,20 @@ sub run ($self) {
     }
 }
 
+sub delete_page ( $self, $key ) {
+    my $title = $self->pages->current->{title};
+    if ( askyesno("Delete page $title?") ) {
+        my $error = $self->api->delete($title);
+        if ($error) {
+            display_msg("Error: $error");
+        }
+        else {
+            $self->pages->delete;
+            display_msg("Deleted.");
+        }
+    }
+}
+
 sub query_connection_details ($self) {
     my $apikey = $self->config->{apikey} || $ENV{REDMINE_APIKEY};
     if ( $apikey ) {

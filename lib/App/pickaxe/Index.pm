@@ -89,7 +89,7 @@ sub select ( $self, $new ) {
     my $clear =
       $self->first_item_on_page( $pages->oldpos ) !=
       $self->first_item_on_page( $pages->pos );
-    $self->update_pad($clear);
+    $self->refresh_pad($clear);
 }
 
 sub format_time ( $self, $time ) {
@@ -140,8 +140,11 @@ sub compile_index_format ($self) {
     return $fmt, @args;
 }
 
-sub create_pad ($self) {
+sub update_pad ($self) {
     my $pages = $self->pages;
+    if ( $self->pad ) {
+        $self->pad->delwin;
+    }
     if ( !$pages->count ) {
         return;
     }
@@ -157,10 +160,11 @@ sub create_pad ($self) {
         $pad->addstring( $x, 0, $line );
         $x++;
     }
-    return $pad;
+    $self->pad( $pad );
+    $self->refresh_pad(1);
 }
 
-sub update_pad ( $self, $clear ) {
+sub refresh_pad ( $self, $clear ) {
     return if !$self->pad;
     my $pages = $self->pages;
     $self->add_selection;
@@ -177,17 +181,8 @@ sub update_pad ( $self, $clear ) {
 
 sub delete_page ( $self, $key ) {
     display_msg "There are no pages." if !$self->pad;
-    my $title = $self->pages->current->{title};
-    if ( askyesno("Delete page $title?") ) {
-        my $error = $self->api->delete($title);
-        $self->set_pages( $self->api->pages );
-        if ($error) {
-            display_msg("Error: $error");
-        }
-        else {
-            display_msg("Deleted.");
-        }
-    }
+    $self->SUPER::delete_page($key);
+    $self->update_pad;
 }
 
 sub update_pages ( $self, $key ) {
@@ -262,8 +257,10 @@ sub jump ( $self, $key ) {
 sub view_page ( $self, $key ) {
     return if !$self->pad;
     $self->remove_selection;
+
     $self->pager->run;
-    $self->update_pad(1);
+
+    $self->update_pad;
     $self->update_statusbar;
     $self->update_helpbar;
 }
@@ -328,11 +325,8 @@ sub set_pages ( $self, $pages ) {
     }
 
     $self->pages->replace( $pages );
-    if ( $self->pad ) {
-        $self->pad->delwin;
-    }
-    $self->pad( $self->create_pad );
-    $self->update_pad(1);
+
+    $self->update_pad;
 }
 
 sub search ( $self, $key ) {

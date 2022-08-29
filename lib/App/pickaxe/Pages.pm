@@ -17,6 +17,11 @@ sub seek ( $self, $offset ) {
     return;
 }
 
+sub delete ( $self ) {
+    splice(@{$self->array}, $self->pos, 1 );
+    $self->seek( $self->pos );
+}
+
 sub replace ($self, $pages) {
     $self->array( $pages );
     $self->pos(0);
