@@ -108,6 +108,10 @@ Reverse the current sort method.
 
 Delete the current wiki page.
 
+=item c
+
+Switch project.
+
 =item h 
 
 Display this help.

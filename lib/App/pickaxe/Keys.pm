@@ -37,6 +37,9 @@ sub getkey {
     }
     else {
         $key = unctrl($key);
+        if ( $key eq '^I' ) {
+            $key = '<Tab>';
+        }
     }
     return $key;
 }
