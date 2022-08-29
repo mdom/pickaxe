@@ -1,0 +1,13 @@
+Source: pickaxe
+Section: perl
+Priority: optional
+Maintainer: Mario Domgoergen <mdom@taz.de>
+Build-Depends: debhelper-compat (= 12), autotools-dev, autoconf 
+Standards-Version: 3.8.4
+
+Package: pickaxe
+Architecture: all
+Depends: ${misc:Depends}, libmojolicious-perl, libcurses-perl, libalgorithm-diff-perl
+Description: Curses-based programm to edit redmine wiki pages
+ This package provides a curses base programm to work with redmine wiki
+ pages. Pages can be searched, edited and deleted.
