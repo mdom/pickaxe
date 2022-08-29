@@ -4,6 +4,7 @@
 # TODO reverse search direction
 # TODO Caching in API
 # TODO threaded with parents in index
+# TODO History
 
 use Mojo::Base -strict, -signatures;
 use Mojo::UserAgent;
