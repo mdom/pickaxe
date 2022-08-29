@@ -18,18 +18,22 @@ our $VERSION = '0.01';
 ## Config can write to stderr
 my $config = App::pickaxe::Config->new;
 
+my $url = shift;
+
+if ( $url ) {
+    $config->base_url( $url );
+}
+
+if ( !$config->base_url ) {
+    die "Usage: $0 BASE_URL\n";
+}
+
 initscr;
 keypad( stdscr, 1 );
 noecho;
 curs_set(0);
 
 $SIG{__WARN__} = sub { die @_ };
-
-my $url = shift;
-
-if ( $url ) {
-    $config->base_url( $url );
-}
 
 eval { App::pickaxe::Index->new( config => $config )->run };
 

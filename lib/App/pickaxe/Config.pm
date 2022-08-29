@@ -24,13 +24,13 @@ sub base_url ( $self, $url = undef ) {
 sub new ($class) {
     my $file = ( $ENV{XDG_CONFIG_HOME} || "$ENV{HOME}/.config" )
       . "/pickaxe/pickaxe.conf";
+    my $config = bless {}, ref $class || $class;
     if ( !-e $file ) {
-        return {};
+        return $config;
     }
     my $path   = path($file);
     my $handle = $path->open('<:encoding(UTF-8)');
     my $has_errors;
-    my $config = bless {}, ref $class || $class;
     my $last_line;
     while (<$handle>) {
         chomp;
