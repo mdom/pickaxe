@@ -1,8 +1,7 @@
 #!/usr/bin/perl
 
 # TODO c - open new wiki/projekt
-# TODO reverse search
-# TODO documentation
+# TODO reverse search direction
 # TODO Caching in API
 # TODO threaded with parents in index
 
@@ -58,17 +57,51 @@ pickaxe - the redmine wiki editor
 Pickaxe is a terminal based programm to view and edit redmine wiki
 pages.
 
+When you start pickaxe your are prompted for your username and passwort
+if those are not set in the configuration file. The index is the
+first screen you see. It is a list of alle wiki pages in your current
+project. You can use the I<Return> to view a wiki page in the pager
+screen.
+
 =head1 DEFAULT BINDINGS
+
+=head2 Index
 
 =over 4
 
 =item s 
 
-Search for wiki pages matching a pattern.
+Search for wiki pages matching a pattern. This is a full text search on
+the server. See I</> to just search on the current titles.
 
 =item e
 
 Edit wiki page under the cursor.
+
+=item a
+
+Add a new wiki page
+
+=item /
+
+Find a wiki page on the current screen. See I<s> to perform a full text
+search on the server.
+
+=item b
+
+Open the current page in the browser
+
+=item o
+
+Change the current sort method.
+
+=item O
+
+Reverse the current sort method.
+
+=item D
+
+Delete the current wiki page.
 
 =item h 
 
@@ -77,6 +110,96 @@ Display this help.
 =item q
 
 Quit pickaxe.
+
+=back
+
+=head2 Pager
+
+=over 4
+
+=item e
+
+Edit the current wiki page.
+
+=item D
+
+Delete the current wiki page.
+
+=item %
+
+Toggle preview mode. If no changed in the configuration file, pandoc is
+used to render the wiki page from textile to plain.
+
+=item b
+
+Open the current page in the browser
+
+=item K
+
+Display the previous wiki page.
+
+=item J
+
+Display the next wiki page.
+
+=item q
+
+Return to the index.
+
+=back
+
+=head1 CONFIGURATION
+
+When pickaxe is first invoked, it will attempt to read its configuration
+file at I<$XDG_CONFIG_HOME/pickaxe/pickaxe.conf>
+
+An configuration file consists of a series of commands. The only
+valid commands are set and bind. Set is used to change configuration
+variables. Bind allows you to change the default key bindings.
+
+=head2 Setting variables
+
+The set command is used to changed configuration variables. It takes the
+variable name and its new value as arguments. For example:
+
+    set pass_cmd pass mdom@example.org
+    set filter_mode yes
+
+The following variables are valid:
+
+=over 4
+
+=item pass_cmd
+
+Command to get the users password. It should return the
+password on stdout on a sinlge line.  There is no default.
+
+=item filter_cmd
+
+Command to filter wiki pages. It should read the page as textile on
+stdin and return a filtered version on stdout. This command defaults to
+I<pandoc -f textfile -t plain>
+
+=item filter_mode
+
+Set to I<yes> if you want to filter wiki pages automatically. Defaults
+to I<no>.
+
+=item username
+
+Specifies the username for you redmine account. If this and
+I<REDMINE_APIKEY> are no set pickaxe will prompt you for your
+username. There is no default.
+
+=item password
+
+Specifies the passwort for you redmine account. If this and
+I<REDMINE_APIKEY> are no set pickaxe will prompt you for your
+password. There is no default.
+
+=item base_url
+
+Specifies the base url of the redmine project you want to edit.
 
 =back
 
@@ -91,3 +214,22 @@ access it by clicking on your account on your redmine wiki and search
 for api key in the right margin.
 
 =back
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright 2022 Mario Domgoergen C<< <mario@domgoergen.com> >>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+=cut
