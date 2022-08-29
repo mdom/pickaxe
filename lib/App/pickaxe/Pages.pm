@@ -56,4 +56,8 @@ sub count ($self) {
     @{ $self->array } + 0;
 }
 
+sub empty ($self) {
+    !@{ $self->array }
+}
+
 1;

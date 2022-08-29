@@ -6,28 +6,31 @@ use Curses;
 our @EXPORT_OK = qw(getline);
 
 my %getline_bindings = (
-    '<Backspace>'     => 'backward_delete_character',
-    '<Left>'          => 'backward_char',
-    '<Right>'         => 'forward_char',
-    '<Up>'            => 'prev_history',
-    '<Down>'          => 'next_history',
-    '^P'              => 'prev_history',
-    '^N'              => 'next_history',
-    '^A'              => 'beginning_of_line',
-    '^E'              => 'end_of_line',
-    '^D'              => 'delete_character',
-    '^K'              => 'kill_line',
-    '^G'              => 'abort',
-    '<Return>'        => 'accept_line',
+    '<Backspace>'      => 'backward_delete_character',
+    '<Left>'           => 'backward_char',
+    '<Right>'          => 'forward_char',
+    '<Up>'             => 'prev_history',
+    '<Down>'           => 'next_history',
+    '^P'               => 'prev_history',
+    '^N'               => 'next_history',
+    '^A'               => 'beginning_of_line',
+    '^E'               => 'end_of_line',
+    '^D'               => 'delete_character',
+    '^K'               => 'kill_line',
+    '^G'               => 'abort',
+    '<Return>'         => 'accept_line',
     '<Esc>d'           => 'kill_word',
     '<Esc><Backspace>' => 'backward_kill_word',
     '<Esc>\\'          => 'delete_horizontal_space',
+    '<Tab>'            => 'complete',
 );
 
 my $buffer = '';
 my $cursor = 0;
 my @history;
 my $history_index;
+my $prev_key = '';
+my @current_completions;
 
 sub getline ( $prompt, $options = {} ) {
     my ( $lines, $cols );
@@ -36,6 +39,7 @@ sub getline ( $prompt, $options = {} ) {
     $cursor = length($buffer);
 
     $history_index = 0;
+    @current_completions = ();
     @history       = @{ $options->{history} || [] };
     unshift @history, $buffer;
 
@@ -57,6 +61,10 @@ sub getline ( $prompt, $options = {} ) {
         }
         no strict 'refs';
         &$funcname( $key, $options );
+
+        ## $prev_key is used in complete() to determine if the last
+        ## pressed key was a tab.
+        $prev_key = $key;
 
         move( $LINES - 1, length($prompt) );
         clrtoeol;
@@ -160,6 +168,54 @@ sub delete_horizontal_space {
     if ($1) {
         $cursor -= length($1);
     }
+}
+
+sub cycle_shift ($array) {
+    my $elt = shift @$array;
+    push @$array, $elt;
+    return $elt;
+}
+
+use Mojo::File 'path';
+
+sub generate_filecompletions ($path) {
+    $path = path($path||'.');
+    my @completions;
+    if ( -d $path ) {
+        @completions = $path->list( { dir => 1 } )->map('to_rel')->each;
+    }
+    else {
+        my $dir  = $path->dirname;
+        my $name = $path->basename;
+        for my $file ( $dir->list( { dir => 1 } )->each ) {
+            if ( index( $file->basename, $name ) == 0 ) {
+                push @completions, $file->to_rel;
+            }
+        }
+    }
+    return @completions;
+}
+
+sub complete ( $key, $options ) {
+    my $completion_matches = $options->{completion_matches} || \&generate_filecompletions;
+    if ( $prev_key ne '<Tab>' || !@current_completions ) {
+        @current_completions = ();
+        substr( $buffer, 0, $cursor ) =~ /(\S+)$/;
+        @current_completions = sort +$completion_matches->($1);
+
+    }
+    if (@current_completions) {
+        substr( $buffer, 0, $cursor ) =~ s/(\S+)$//;
+        $cursor -= length($1)||0;
+
+        my $elt = cycle_shift( \@current_completions );
+        substr( $buffer, $cursor, 0, $elt );
+        $cursor += length($elt);
+    }
+    if ( @current_completions == 1 ) {
+        @current_completions = ();
+    }
+    return;
 }
 
 1;

@@ -14,7 +14,7 @@ has 'config';
 has pages => sub { App::pickaxe::Pages->new; };
 
 has pager => sub ($self) {
-    App::pickaxe::Pager->new( pages => $self->pages, config => $self->config  );
+    App::pickaxe::Pager->new( pages => $self->pages, config => $self->config );
 };
 
 has help_summary =>
@@ -32,7 +32,9 @@ has bindings => sub {
         k            => 'prev_item',
         e            => 'edit_page',
         a            => 'add_page',
+        A            => 'add_attachment',
         b            => 'open_in_browser',
+        c            => 'switch_project',
         '<Return>'   => 'view_page',
         '<PageDown>' => 'next_page',
         '<PageUp>'   => 'prev_page',
@@ -74,12 +76,12 @@ sub remove_selection ($self) {
     $self->pad->chgat( $self->pages->pos, 0, -1, A_NORMAL, 0, 0 );
 }
 
-sub add_selection ( $self ) {
+sub add_selection ($self) {
     $self->pad->chgat( $self->pages->pos, 0, -1, A_REVERSE, 0, 0 );
 }
 
 sub select ( $self, $new ) {
-    return if !$self->pad;
+    return if $self->pages->empty;
     my $pages = $self->pages;
     if ( $new != $pages->pos ) {
         $self->remove_selection;
@@ -102,6 +104,12 @@ sub format_time ( $self, $time ) {
     $mon  -= 1;
     $year -= 1900;
     strftime( $strftime_fmt, $sec, $min, $hour, $mday, $mon, $year );
+}
+
+sub add_attachment ( $self, $key ) {
+    my $file = getline('Attach file: ');
+    endwin;
+    die $file;
 }
 
 sub compile_index_format ($self) {
@@ -145,11 +153,13 @@ sub update_pad ($self) {
     if ( $self->pad ) {
         $self->pad->delwin;
     }
-    if ( !$pages->count ) {
-        return;
+    my $pad;
+    if ( $pages->empty ) {
+        $pad = newpad( $LINES, $COLS );
     }
-
-    my $pad = newpad( $pages->count, $COLS );
+    else {
+        $pad = newpad( $pages->count, $COLS );
+    }
     my $x   = 0;
     my ( $fmt, @args ) = $self->compile_index_format;
     for my $page ( $pages->each ) {
@@ -160,12 +170,12 @@ sub update_pad ($self) {
         $pad->addstring( $x, 0, $line );
         $x++;
     }
-    $self->pad( $pad );
+    $self->pad($pad);
     $self->refresh_pad(1);
 }
 
 sub refresh_pad ( $self, $clear ) {
-    return if !$self->pad;
+    return if $self->pages->empty;
     my $pages = $self->pages;
     $self->add_selection;
 
@@ -192,6 +202,7 @@ sub update_pages ( $self, $key ) {
 
 has 'needle';
 has 'find_history' => sub { [] };
+has project_history => sub { [] };
 
 sub find_next ( $self, $key ) {
     display_msg "There are no pages." if !$self->pad;
@@ -245,7 +256,7 @@ sub find ( $self, $key ) {
 }
 
 sub jump ( $self, $key ) {
-    return if !$self->pad;
+    return if $self->pages->empty;
     my $number = getline( "Jump to wiki page: ", { buffer => $key } );
     if ( !$number || $number =~ /\D/ ) {
         display_msg("Argument must be a number.");
@@ -255,7 +266,7 @@ sub jump ( $self, $key ) {
 }
 
 sub view_page ( $self, $key ) {
-    return if !$self->pad;
+    return if $self->pages->empty;
     $self->remove_selection;
 
     $self->pager->run;
@@ -266,7 +277,7 @@ sub view_page ( $self, $key ) {
 }
 
 sub prev_page ( $self, $key ) {
-    return if !$self->pad;
+    return if $self->pages->empty;
     my $pages = $self->pages;
     my $last_item_on_page =
       int( $pages->pos / $self->maxlines ) * $self->maxlines - 1;
@@ -283,27 +294,27 @@ sub first_item_on_page ( $self, $selected ) {
 }
 
 sub next_item ( $self, $key ) {
-    return if !$self->pad;
+    return if $self->pages->empty;
     $self->select( $self->pages->pos + 1 );
 }
 
 sub prev_item ( $self, $key ) {
-    return if !$self->pad;
+    return if $self->pages->empty;
     $self->select( $self->pages->pos - 1 );
 }
 
 sub first_item ( $self, $key ) {
-    return if !$self->pad;
+    return if $self->pages->empty;
     $self->select(0);
 }
 
 sub last_item ( $self, $key ) {
-    return if !$self->pad;
+    return if $self->pages->empty;
     $self->select( $self->pages->count - 1 );
 }
 
 sub next_page ( $self, $key ) {
-    return if !$self->pad;
+    return if $self->pages->empty;
     my $first_item_on_page =
       int( $self->pages->pos / $self->maxlines ) * $self->maxlines;
     if ( $self->pages->count > $first_item_on_page + $self->maxlines ) {
@@ -324,7 +335,7 @@ sub set_pages ( $self, $pages ) {
         $pages = [ reverse @$pages ];
     }
 
-    $self->pages->replace( $pages );
+    $self->pages->replace($pages);
 
     $self->update_pad;
 }
@@ -348,6 +359,34 @@ sub search ( $self, $key ) {
         $self->set_pages($pages);
         display_msg('To view all messages, search for "all".');
     }
+}
+
+sub switch_project ( $self, $key ) {
+    my %projects = map { $_ => 1 } @{$self->api->projects};
+    my $project  = getline(
+        'Open project: ',
+        {
+            history => $self->project_history,
+            completion_matches => sub ($word) {
+                $word ||= '';
+                my @completions;
+                for my $project (keys %projects) {
+                    if ( index( $project, $word ) == 0 ) {
+                        push @completions, $project;
+                    }
+                }
+                return @completions;
+            }
+        }
+    );
+    return if !$project;
+    if (!exists $projects{$project} ) {
+        display_msg("$project is not a project.");
+        return;
+    }
+
+    $self->api->base_url->path("/projects/$project/");
+    $self->set_pages( $self->api->pages );
 }
 
 sub run ($self) {

@@ -74,6 +74,49 @@ sub page ( $self, $title ) {
     return;
 }
 
+sub projects ($self) {
+    my $res = $self->get(
+        "/projects.json",
+        include => 'enabled_modules',
+        limit   => 100,
+        offset  => 0
+    );
+    return if !$res->is_success;
+    my $data     = $res->json;
+    my @projects = @{ $data->{projects} };
+
+    return if !@projects;
+
+    my $total_count = $data->{total_count};
+    my $offset      = $data->{offset};
+
+    while ( $total_count != @projects ) {
+        my $res = $self->get(
+            "/projects.json",
+            include => 'enabled_modules',
+            limit   => 100,
+            offset  => $offset + 100,
+        );
+        return if !$res->is_success;
+        my $data = $res->json;
+        $offset = $data->{offset};
+        push @projects, @{ $data->{projects} };
+    }
+
+    my @result;
+  PROJECT:
+    for my $project (@projects) {
+        for my $module ( @{ $project->{enabled_modules} } ) {
+            if ( $module->{name} eq 'wiki' ) {
+                push @result, $project->{identifier};
+                next PROJECT;
+            }
+        }
+    }
+
+    return \@result;
+}
+
 sub search ( $self, $query ) {
     my $res = $self->get(
         "search.json",

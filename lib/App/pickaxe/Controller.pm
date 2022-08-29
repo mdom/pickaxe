@@ -15,6 +15,7 @@ has maxlines => sub { $LINES - 3 };
 has api => sub { App::pickaxe::Api->new( base_url => shift->config->{base_url} ) };
 
 sub open_in_browser ( $self, $key ) {
+    return if $self->pages->empty;
     use IPC::Cmd;
     my $title = $self->pages->current->{title};
     IPC::Cmd::run( command => [ 'xdg-open', $self->api->url_for($title) ] );
@@ -87,6 +88,7 @@ sub update_current_page ($self) {
 }
 
 sub edit_page ( $self, $key ) {
+    return if $self->pages->empty;
     $self->update_current_page;
     my $title   = $self->pages->current->{title};
     my $version = $self->pages->current->{version};
@@ -224,6 +226,7 @@ sub run ($self) {
 }
 
 sub delete_page ( $self, $key ) {
+    return if $self->pages->empty;
     my $title = $self->pages->current->{title};
     if ( askyesno("Delete page $title?") ) {
         my $error = $self->api->delete($title);
