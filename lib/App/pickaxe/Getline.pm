@@ -11,17 +11,17 @@ my %getline_bindings = (
     '<Right>'         => 'forward_char',
     '<Up>'            => 'prev_history',
     '<Down>'          => 'next_history',
-    "^P"              => 'prev_history',
-    "^N"              => 'next_history',
-    "^A"              => 'beginning_of_line',
-    "^E"              => 'end_of_line',
-    "^D"              => 'delete_character',
-    "^K"              => 'kill_line',
-    "^G"              => 'abort',
-    "<Return>"        => 'accept_line',
-    "<Esc>d"           => 'kill_word',
-    "<Esc><Backspace>" => 'backward_kill_word',
-    "<Esc>\\"          => 'delete_horizontal_space',
+    '^P'              => 'prev_history',
+    '^N'              => 'next_history',
+    '^A'              => 'beginning_of_line',
+    '^E'              => 'end_of_line',
+    '^D'              => 'delete_character',
+    '^K'              => 'kill_line',
+    '^G'              => 'abort',
+    '<Return>'        => 'accept_line',
+    '<Esc>d'           => 'kill_word',
+    '<Esc><Backspace>' => 'backward_kill_word',
+    '<Esc>\\'          => 'delete_horizontal_space',
 );
 
 my $buffer = '';
@@ -104,6 +104,9 @@ sub backward_delete_character {
 }
 
 sub self_insert ( $key, $options ) {
+    if ( $key eq '<Space>' ) {
+        $key = ' ';
+    }
     substr( $buffer, $cursor, 0, $key );
     $cursor++;
 }
