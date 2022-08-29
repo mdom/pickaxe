@@ -61,15 +61,15 @@ sub save_page ( $self, $title, $new_text, $version = undef ) {
         else {
             my $option =
               select_option( 'Conflict detected', qw(Edit Abort Overwrite) );
-            if ( $option eq 'edit' ) {
+            if ( ! defined $option or $option eq 'abort' ) {
+                display_msg('Not saved.');
+            }
+            elsif ( $option eq 'edit' ) {
                 ( $new_text, $version ) =
                   $self->handle_conflict( $title, $new_text );
                 if ( defined $new_text ) {
                     next;
                 }
-                display_msg('Not saved.');
-            }
-            elsif ( $option eq 'abort' ) {
                 display_msg('Not saved.');
             }
             elsif ( $option eq 'overwrite' ) {
@@ -140,11 +140,11 @@ sub handle_conflict ( $self, $title, $old_text ) {
         if ( $resolved_text =~ /^(?:\+|\-)/sm ) {
             my $option =
               select_option( 'Unresolved conflicts', qw(Edit Abort) );
-            if ( $option eq 'edit' ) {
-                next;
-            }
-            elsif ( $option eq 'abort' ) {
+            if ( !defined $option or $option eq 'abort' ) {
                 return;
+            }
+            elsif ( $option eq 'edit' ) {
+                next;
             }
         }
         last;
