@@ -8,7 +8,7 @@ use Mojo::Util 'decode', 'encode';
 
 my $CLEAR = 1;
 
-has help_summary => "q:Quit e:Edit /:find o:Open %:Preview ?:help";
+has help_summary => "q:Quit e:Edit /:find o:Open %:Preview D:Delete ?:help";
 
 has map => 'pager';
 has 'config';
@@ -37,6 +37,7 @@ has bindings => sub {
         o             => 'open_in_browser',
         J => 'next_item',
         K => 'prev_item',
+        D => 'delete_page',
     };
 };
 
@@ -81,7 +82,7 @@ sub next_item ( $self, $key ) {
     my $prev = $self->pages->current;
     $self->pages->next;
     if ( $prev != $self->pages->current ) {
-        $self->create_pad;
+        $self->update_pad;
     }
 }
 
@@ -89,17 +90,17 @@ sub prev_item ( $self, $key ) {
     my $prev = $self->pages->current;
     $self->pages->prev;
     if ( $prev != $self->pages->current ) {
-        $self->create_pad;
+        $self->update_pad;
     }
 }
 
 sub edit_page ( $self, $key ) {
     $self->SUPER::edit_page($key);
-    $self->create_pad;
+    $self->update_pad;
     $self->redraw(1);
 }
 
-sub create_pad ($self) {
+sub update_pad ($self) {
     if ( $self->pad ) {
         $self->pad->delwin;
     }
@@ -300,7 +301,7 @@ sub toggle_filter_mode ( $self, $key ) {
         $config->filter_mode('no');
     }
 
-    $self->create_pad;
+    $self->update_pad;
     if ( $config->{filter_mode} eq 'yes' ) {
         display_msg('Filter mode enabled.');
     }
@@ -333,8 +334,13 @@ sub bottom ( $self, $key ) {
     $self->set_line( $self->nlines - $self->maxlines, $CLEAR );
 }
 
+sub delete_page ( $self, $key ) {
+    $self->SUPER::delete_page( $key );
+    $self->update_pad;
+}
+
 sub run ($self) {
-    $self->create_pad;
+    $self->update_pad;
     $self->SUPER::redraw;
     $self->SUPER::run;
 }

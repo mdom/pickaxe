@@ -3,10 +3,8 @@
 # TODO c - open new wiki/projekt
 # TODO reverse search
 # TODO documentation
-# TODO more config options
 # TODO Caching in API
 # TODO threaded with parents in index
-# TODO delete in pager
 
 use Mojo::Base -strict, -signatures;
 use Mojo::UserAgent;
