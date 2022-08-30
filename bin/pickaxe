@@ -5,6 +5,7 @@
 # TODO threaded with parents in index?
 # TODO History
 # TODO Attachments
+# TODO yank urls
 
 use Mojo::Base -strict, -signatures;
 use Mojo::UserAgent;
