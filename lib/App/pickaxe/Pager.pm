@@ -3,7 +3,7 @@ use Mojo::Base -signatures, 'App::pickaxe::Controller';
 use Curses;
 use App::pickaxe::DisplayMsg 'display_msg';
 use App::pickaxe::Getline 'getline';
-use IPC::Cmd 'run_forked';
+use IPC::Cmd 'run_forked', 'can_run';
 use Mojo::Util 'decode', 'encode';
 
 my $CLEAR = 1;
@@ -42,15 +42,6 @@ has bindings => sub {
 };
 
 has 'index';
-
-sub which ($cmd) {
-    for my $path ( split( ':', $ENV{PATH} ) ) {
-        if ( -e "$path/$cmd" ) {
-            return "$path/$cmd";
-        }
-    }
-    return '';
-}
 
 has nlines   => 0;
 has ncolumns => 0;
@@ -291,7 +282,7 @@ sub toggle_filter_mode ( $self, $key ) {
 
     if ( $config->filter_mode eq 'no' ) {
         my $cmd = $config->filter_cmd->[0];
-        if ( !which($cmd) ) {
+        if ( !can_run($cmd) ) {
             display_msg("$cmd not found.");
             return;
         }
