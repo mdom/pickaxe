@@ -16,6 +16,9 @@ has maps        => sub { {} };
 
 sub base_url ( $self, $url = undef ) {
     if ($url) {
+        if ( $url !~ m{/$} ) {
+            $url .= '/';
+        }
         $self->{base_url} = Mojo::URL->new($url);
     }
     return $self->{base_url};
