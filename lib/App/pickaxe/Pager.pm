@@ -38,6 +38,7 @@ has bindings => sub {
         K             => 'prev_item',
         D             => 'delete_page',
         '^L'          => 'force_redraw',
+        'y'           => 'yank_url',
     };
 };
 

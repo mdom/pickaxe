@@ -12,6 +12,7 @@ has 'password';
 has filter_cmd  => sub { [qw(pandoc -f textile -t plain)] };
 has filter_mode => 'no';
 has pass_cmd    => sub { [] };
+has yank_cmd    => sub { ['xclip'] };
 has maps        => sub { {} };
 
 sub base_url ( $self, $url = undef ) {

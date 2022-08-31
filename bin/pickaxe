@@ -5,7 +5,6 @@
 # TODO threaded with parents in index?
 # TODO History
 # TODO Attachments
-# TODO yank urls
 
 use Mojo::Base -strict, -signatures;
 use Mojo::UserAgent;
@@ -113,6 +112,10 @@ Delete the current wiki page.
 
 Switch project.
 
+=item y 
+
+Yank url of current wiki page to clipboard.
+
 =item h 
 
 Display this help.
@@ -151,6 +154,10 @@ Display the previous wiki page.
 =item J
 
 Display the next wiki page.
+
+=item y 
+
+Yank url of current wiki page to clipboard.
 
 =item q
 
@@ -194,6 +201,11 @@ I<pandoc -f textfile -t plain>
 
 Set to I<yes> if you want to filter wiki pages automatically. Defaults
 to I<no>.
+
+=item yank_cmd
+
+Command to copy the url of the current wiki page to the
+clipboard. Defaults to I<xclip>.
 
 =item username
 
