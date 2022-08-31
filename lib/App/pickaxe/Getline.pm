@@ -21,7 +21,7 @@ my %getline_bindings = (
     '<Return>'         => 'accept_line',
     '<Esc>d'           => 'kill_word',
     '<Esc><Backspace>' => 'backward_kill_word',
-    '<Esc>\\'          => 'delete_horizontal_space',
+    '<Esc><Backslash>' => 'delete_horizontal_space',
     '<Tab>'            => 'complete',
 );
 
@@ -50,6 +50,7 @@ sub getline ( $prompt, $options = {} ) {
     refresh;
     while (1) {
         my $key = getkey;
+        next if !$key;
 
         my $funcname = $getline_bindings{$key} || 'self_insert';
         if ( $funcname eq 'accept_line' ) {

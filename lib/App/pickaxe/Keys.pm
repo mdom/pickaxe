@@ -14,38 +14,43 @@ my %table = (
     Curses::KEY_HOME      => '<Home>',
     Curses::KEY_NPAGE     => '<PageDown>',
     Curses::KEY_PPAGE     => '<PageUp>',
-    "\n"                  => '<Return>',
+    Curses::KEY_RESIZE    => '<Resize>',
+    "^J"                  => '<Return>',
+    "^I"                  => '<Tab>',
+    "^["                  => '<Esc>',
     ' '                   => '<Space>',
     '\\'                  => '<Backslash>',
 );
 
 sub getkey {
-    my $key = getchar;
-    if ( exists $table{$key} ) {
-        $key = $table{$key};
+    my ($ch, $key) = getchar;
+    my $ret;
+
+    if ( defined $key ) {
+       if ( exists $table{$key} ) {
+            $ret = $table{$key};
+       }
+       else {
+           return;
+       }
     }
-    elsif ( $key eq "" ) {
+    elsif( defined $ch ) {
+        $ch = unctrl($ch);
+        $ret = $table{$ch} || $ch;
+    }
+    else {
+        return;
+    }
+
+    if ( $ret eq '<Esc>' ) {
         nodelay( stdscr, 1 );
-        my $mod = getchar;
-        if ($mod) {
-            $key = '<Esc>' . translate($mod);
-        }
-        else {
-            $key = '<Esc>';
+        my $key = getchar;
+        if ($key) {
+            $ret .= $table{$key} || $key;
         }
         nodelay( stdscr, 0 );
     }
-    else {
-        $key = unctrl($key);
-        if ( $key eq '^I' ) {
-            $key = '<Tab>';
-        }
-    }
-    return $key;
-}
-
-sub translate ($key) {
-    $table{$key} || $key;
+    return $ret;
 }
 
 1;

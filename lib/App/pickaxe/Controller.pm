@@ -204,23 +204,18 @@ sub run ($self) {
     $self->redraw;
     while (1) {
         my $key = getkey;
+        next if !$key;
         display_msg('');
+        my $funcname = $self->bindings->{$key};
 
-        if ( my $funcname =
-               $self->config->{maps}->{ $self->map }->{$key}
-            || $self->bindings->{$key} )
-        {
-            if ( $funcname eq 'quit' ) {
-                last;
-            }
-            ## TODO Check if function exists on startup!
-            $self->$funcname($key);
+        if ( !$funcname) {
+            display_msg("Key is not bound.");
         }
-        elsif ( $key eq KEY_RESIZE ) {
-            resize_window();
+        elsif ( $funcname eq 'quit' ) {
+            last;
         }
         else {
-            display_msg("Key is not bound.");
+            $self->$funcname($key);
         }
     }
 }

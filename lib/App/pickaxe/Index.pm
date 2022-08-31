@@ -41,6 +41,7 @@ has bindings => sub {
         '<Left>'     => 'prev_page',
         '<Right>'    => 'next_page',
         '<Space>'    => 'next_page',
+        '<Resize>'   => 'redraw',
         s            => 'search',
         o            => 'set_order',
         O            => 'set_reverse_order',
