@@ -89,10 +89,7 @@ sub select ( $self, $new ) {
     }
     $pages->seek($new);
 
-    my $clear =
-      $self->first_item_on_page( $pages->oldpos ) !=
-      $self->first_item_on_page( $pages->pos );
-    $self->refresh_pad($clear);
+    $self->redraw;
 }
 
 sub format_time ( $self, $time ) {
@@ -172,22 +169,21 @@ sub update_pad ($self) {
         $x++;
     }
     $self->pad($pad);
-    $self->refresh_pad(1);
+    $self->redraw;
 }
 
-sub refresh_pad ( $self, $clear ) {
+sub redraw ($self, @) {
     return if $self->pages->empty;
     my $pages = $self->pages;
     $self->add_selection;
 
     my $offset = int( $pages->pos / $self->maxlines ) * $self->maxlines;
-    if ($clear) {
-        clear;
-        $self->update_statusbar;
-        $self->update_helpbar;
-        refresh;
-    }
-    prefresh( $self->pad, $offset, 0, 1, 0, $LINES - 3, $COLS - 1 );
+
+    erase;
+    $self->SUPER::redraw;
+    noutrefresh(stdscr);
+    pnoutrefresh( $self->pad, $offset, 0, 1, 0, $LINES - 3, $COLS - 1 );
+    doupdate;
 }
 
 sub delete_page ( $self, $key ) {
@@ -269,12 +265,8 @@ sub jump ( $self, $key ) {
 sub view_page ( $self, $key ) {
     return if $self->pages->empty;
     $self->remove_selection;
-
     $self->pager->run;
-
     $self->update_pad;
-    $self->update_statusbar;
-    $self->update_helpbar;
 }
 
 sub prev_page ( $self, $key ) {

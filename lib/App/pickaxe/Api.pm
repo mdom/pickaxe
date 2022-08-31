@@ -10,10 +10,8 @@ sub get ( $self, $path, %parameters ) {
     if (%parameters) {
         $url->query->merge(%parameters);
     }
-    my $res = eval {
-        $self->ua->get( $url => { 'Content-Type' => 'application/json' } )
+    my $res = $self->ua->get( $url => { 'Content-Type' => 'application/json' } )
           ->result;
-    };
     return $res;
 }
 
