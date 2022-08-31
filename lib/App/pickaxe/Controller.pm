@@ -12,7 +12,8 @@ use Algorithm::Diff;
 
 has maxlines => sub { $LINES - 3 };
 
-has api => sub { App::pickaxe::Api->new( base_url => shift->config->{base_url} ) };
+has api =>
+  sub { App::pickaxe::Api->new( base_url => shift->config->{base_url} ) };
 
 sub open_in_browser ( $self, $key ) {
     return if $self->pages->empty;
@@ -21,7 +22,7 @@ sub open_in_browser ( $self, $key ) {
     IPC::Cmd::run( command => [ 'xdg-open', $self->api->url_for($title) ] );
 }
 
-sub dump ($self, $data) {
+sub dump ( $self, $data ) {
     endwin;
     use Data::Dumper;
     die Dumper $data;
@@ -67,7 +68,7 @@ sub save_page ( $self, $title, $new_text, $version = undef ) {
         else {
             my $option =
               select_option( 'Conflict detected', qw(Edit Abort Overwrite) );
-            if ( ! defined $option or $option eq 'abort' ) {
+            if ( !defined $option or $option eq 'abort' ) {
                 display_msg('Not saved.');
             }
             elsif ( $option eq 'edit' ) {
@@ -88,8 +89,7 @@ sub save_page ( $self, $title, $new_text, $version = undef ) {
 }
 
 sub update_current_page ($self) {
-    $self->pages->set(
-        $self->api->page( $self->pages->current->{title} ) );
+    $self->pages->set( $self->api->page( $self->pages->current->{title} ) );
 }
 
 sub edit_page ( $self, $key ) {
@@ -211,7 +211,7 @@ sub run ($self) {
         display_msg('');
         my $funcname = $self->bindings->{$key};
 
-        if ( !$funcname) {
+        if ( !$funcname ) {
             display_msg("Key is not bound.");
         }
         elsif ( $funcname eq 'quit' ) {
@@ -240,20 +240,21 @@ sub delete_page ( $self, $key ) {
 
 sub query_connection_details ($self) {
     my $apikey = $self->config->{apikey} || $ENV{REDMINE_APIKEY};
-    if ( $apikey ) {
+    if ($apikey) {
         $self->config->{base_url}->query( key => $apikey );
     }
     else {
         my $username = $self->config->{username} || getline("Username: ");
         my $password;
-        if ( @{$self->config->{pass_cmd}}) {
+        if ( @{ $self->config->{pass_cmd} } ) {
             endwin;
             my $cmd = "@{$self->config->{pass_cmd}}";
             $password = qx($cmd);
             chomp($password);
         }
         else {
-            $password = $self->config->{password} || getline( "Password: ", { password => 1 } );
+            $password = $self->config->{password}
+              || getline( "Password: ", { password => 1 } );
         }
         $self->config->{base_url}->userinfo("$username:$password");
     }
