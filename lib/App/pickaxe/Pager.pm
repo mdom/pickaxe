@@ -34,9 +34,10 @@ has bindings => sub {
         'n'           => 'find_next',
         '<Backslash>' => 'find_toggle',
         o             => 'open_in_browser',
-        J => 'next_item',
-        K => 'prev_item',
-        D => 'delete_page',
+        J             => 'next_item',
+        K             => 'prev_item',
+        D             => 'delete_page',
+        '^L'          => 'force_redraw',
     };
 };
 

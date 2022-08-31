@@ -62,6 +62,7 @@ has bindings => sub {
         8            => 'jump',
         9            => 'jump',
         0            => 'jump',
+        '^L'         => 'force_redraw',
     };
 };
 
