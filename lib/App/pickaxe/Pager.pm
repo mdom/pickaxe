@@ -6,8 +6,6 @@ use App::pickaxe::Getline 'getline';
 use IPC::Cmd 'run_forked', 'can_run';
 use Mojo::Util 'decode', 'encode';
 
-my $CLEAR = 1;
-
 has help_summary => "q:Quit e:Edit /:find o:Open %:Preview D:Delete ?:help";
 
 has map => 'pager';
@@ -265,7 +263,7 @@ sub set_column ( $self, $new ) {
     $self->redraw;
 }
 
-sub set_line ( $self, $new, $clear = 0 ) {
+sub set_line ( $self, $new ) {
     $self->current_line($new);
     if ( $self->current_line < 0 ) {
         $self->current_line(0);
@@ -309,19 +307,19 @@ sub prev_line ( $self, $key ) {
 }
 
 sub next_page ( $self, $key ) {
-    $self->set_line( $self->current_line + $self->maxlines, $CLEAR );
+    $self->set_line( $self->current_line + $self->maxlines );
 }
 
 sub prev_page ( $self, $key ) {
-    $self->set_line( $self->current_line - $self->maxlines, $CLEAR );
+    $self->set_line( $self->current_line - $self->maxlines );
 }
 
 sub top ( $self, $key ) {
-    $self->set_line( 0, $CLEAR );
+    $self->set_line(0);
 }
 
 sub bottom ( $self, $key ) {
-    $self->set_line( $self->nlines - $self->maxlines, $CLEAR );
+    $self->set_line( $self->nlines - $self->maxlines );
 }
 
 sub delete_page ( $self, $key ) {
