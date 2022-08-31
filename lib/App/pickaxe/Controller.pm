@@ -171,7 +171,6 @@ sub update_helpbar ($self) {
     $help = substr( $help, 0, $COLS - 1 );
     addstring( $help . ( ' ' x ( $COLS - length($help) ) ) );
     attroff(A_REVERSE);
-    refresh;
 }
 
 sub update_statusbar ($self) {
@@ -186,7 +185,6 @@ sub update_statusbar ($self) {
     addstring( $left . ( ' ' x ( $COLS - length($left) ) ) );
     addstring( $LINES - 2, $COLS - 1 - length($right), $right );
     attroff(A_REVERSE);
-    refresh;
 }
 
 sub display_help ( $self, $key ) {

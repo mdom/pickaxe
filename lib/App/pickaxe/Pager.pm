@@ -89,7 +89,7 @@ sub prev_item ( $self, $key ) {
 sub edit_page ( $self, $key ) {
     $self->SUPER::edit_page($key);
     $self->update_pad;
-    $self->redraw(1);
+    $self->redraw;
 }
 
 sub update_pad ($self) {
@@ -139,7 +139,7 @@ sub update_pad ($self) {
         $x++;
     }
     $self->pad($pad);
-    $self->redraw(1);
+    $self->redraw;
 }
 
 sub DESTROY ($self) {
@@ -148,15 +148,13 @@ sub DESTROY ($self) {
     }
 }
 
-sub redraw ( $self, $clear = 0 ) {
-    if ($clear) {
-        clear;
-        refresh;
-        $self->SUPER::redraw;
-    }
-    $self->update_statusbar;
-    $self->pad->prefresh( $self->current_line, $self->current_column, 1, 0,
+sub redraw ( $self, @) {
+    erase;
+    $self->SUPER::redraw;
+    noutrefresh(stdscr);
+    pnoutrefresh( $self->pad, $self->current_line, $self->current_column, 1, 0,
         $self->maxlines, $COLS - 1 );
+    doupdate;
 }
 
 has find_active => 1;
@@ -264,7 +262,7 @@ sub set_column ( $self, $new ) {
         $self->current_column( $self->ncolumns - $COLS / 2 );
     }
 
-    $self->redraw(1);
+    $self->redraw;
 }
 
 sub set_line ( $self, $new, $clear = 0 ) {
@@ -275,7 +273,7 @@ sub set_line ( $self, $new, $clear = 0 ) {
     elsif ( $self->current_line > $self->nlines - 1 ) {
         $self->current_line( $self->nlines - 1 );
     }
-    $self->redraw($clear);
+    $self->redraw;
 }
 
 sub toggle_filter_mode ( $self, $key ) {

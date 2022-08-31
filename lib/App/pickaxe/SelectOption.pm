@@ -6,7 +6,7 @@ use Curses;
 our @EXPORT_OK = ( 'select_option', 'askyesno' );
 
 sub askyesno ($question) {
-    my $ret = select_option( $question, qw(Yes No));
+    my $ret = select_option( $question, qw(Yes No) );
     if ( !defined $ret or $ret eq 'no' ) {
         return 0;
     }
@@ -22,10 +22,11 @@ sub clear_last_line {
 
 sub select_option ( $prompt, @options ) {
     clear_last_line;
-    addstring("$prompt " . join('/', @options) . '?: ');
+    addstring( "$prompt " . join( '/', @options ) . '?: ' );
     my %options = map { /([A-Z])/; lc($1) => lc($_) } @options;
     while (1) {
         my $key = getkey;
+        next if !defined $key;
         if ( $key eq "^G" ) {
             clear_last_line;
             return;
