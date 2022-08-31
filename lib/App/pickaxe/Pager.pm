@@ -26,6 +26,7 @@ has bindings => sub {
         '<Up>'        => 'prev_line',
         '<Return>'    => 'next_line',
         '<Backspace>' => 'prev_line',
+        '<Resize>'    => 'redraw',
         '%'           => 'toggle_filter_mode',
         '<Home>'      => 'top',
         '<End>'       => 'bottom',
