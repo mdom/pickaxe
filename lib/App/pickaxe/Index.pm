@@ -63,6 +63,7 @@ has bindings => sub {
         9            => 'jump',
         0            => 'jump',
         '^L'         => 'force_redraw',
+        'y'          => 'yank_url',
     };
 };
 

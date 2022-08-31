@@ -28,6 +28,15 @@ sub dump ( $self, $data ) {
     die Dumper $data;
 }
 
+sub yank_url ( $self, @ ) {
+    my $url = $self->api->url_for( $self->pages->current->{title} );
+    open( my $xclip, '|-', @{ $self->config->yank_cmd } )
+      or display_msg("Can't yank url: $!");
+    print $xclip $url;
+    close $xclip;
+    display_msg("Copied url to clipboard.");
+}
+
 sub add_page ( $self, $key ) {
     my $title = getline( "Page name: ", { history => $self->find_history } );
     if ( !$title ) {
