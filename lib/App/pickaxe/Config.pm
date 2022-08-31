@@ -57,7 +57,7 @@ sub new ($class) {
                 warn "Error in $file, line $.: $key: unknown variable\n";
                 $has_errors++;
             }
-            elsif ( ref($config->$key) eq 'ARRAY' ) {
+            elsif ( ref( $config->$key ) eq 'ARRAY' ) {
                 $config->$key( [ $value, @rest ] );
             }
             else {

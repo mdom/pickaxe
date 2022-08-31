@@ -98,7 +98,7 @@ sub update_pad ($self) {
     my $cols = $COLS;
     my $text = $self->api->text_for( $self->pages->current->{title} );
 
-    my $filter_cmd = $self->config->filter_cmd;
+    my $filter_cmd  = $self->config->filter_cmd;
     my $filter_mode = $self->config->filter_mode;
     if ( $text && $filter_mode eq 'yes' && @$filter_cmd ) {
         my $result =
@@ -147,7 +147,7 @@ sub DESTROY ($self) {
     }
 }
 
-sub redraw ( $self, @) {
+sub redraw ( $self, @ ) {
     erase;
     $self->SUPER::redraw;
     noutrefresh(stdscr);
@@ -324,7 +324,7 @@ sub bottom ( $self, $key ) {
 }
 
 sub delete_page ( $self, $key ) {
-    $self->SUPER::delete_page( $key );
+    $self->SUPER::delete_page($key);
     $self->update_pad;
 }
 
