@@ -87,7 +87,7 @@ sub prev_item ( $self, $key ) {
 }
 
 sub edit_page ( $self, $key ) {
-    $self->SUPER::edit_page($key);
+    $self->next::method($key);
     $self->update_pad;
     $self->redraw;
 }
@@ -150,7 +150,7 @@ sub DESTROY ($self) {
 
 sub redraw ( $self, @ ) {
     erase;
-    $self->SUPER::redraw;
+    $self->next::method;
     noutrefresh(stdscr);
     pnoutrefresh( $self->pad, $self->current_line, $self->current_column, 1, 0,
         $self->maxlines, $COLS - 1 );
@@ -325,14 +325,13 @@ sub bottom ( $self, $key ) {
 }
 
 sub delete_page ( $self, $key ) {
-    $self->SUPER::delete_page($key);
+    $self->next::method($key);
     $self->update_pad;
 }
 
 sub run ($self) {
     $self->update_pad;
-    $self->SUPER::redraw;
-    $self->SUPER::run;
+    $self->next::method;
 }
 
 1;

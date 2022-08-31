@@ -182,7 +182,7 @@ sub redraw ($self, @) {
     my $offset = int( $pages->pos / $self->maxlines ) * $self->maxlines;
 
     erase;
-    $self->SUPER::redraw;
+    $self->next::method;
     noutrefresh(stdscr);
     pnoutrefresh( $self->pad, $offset, 0, 1, 0, $LINES - 3, $COLS - 1 );
     doupdate;
@@ -190,7 +190,7 @@ sub redraw ($self, @) {
 
 sub delete_page ( $self, $key ) {
     display_msg "There are no pages." if !$self->pad;
-    $self->SUPER::delete_page($key);
+    $self->next::method($key);
     $self->update_pad;
 }
 
@@ -385,10 +385,9 @@ sub switch_project ( $self, $key ) {
 }
 
 sub run ($self) {
-    $self->SUPER::redraw;
     $self->query_connection_details;
     $self->set_pages( $self->api->pages );
-    $self->SUPER::run;
+    $self->next::method;
 }
 
 1;
