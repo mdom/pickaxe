@@ -117,7 +117,7 @@ sub self_insert ( $key, $options ) {
         $key = ' ';
     }
     substr( $buffer, $cursor, 0, $key );
-    $cursor++;
+    $cursor += length($key);
 }
 
 sub backward_char {
