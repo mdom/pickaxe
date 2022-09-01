@@ -250,6 +250,46 @@ password. There is no default.
 
 Specifies the base url of the redmine project you want to edit.
 
+=item index_time_format.
+
+The I<strftime> format used in the index display. The default is
+'%Y-%m-%d %H:%M:%S'.
+
+=item index_format
+
+This variable allows you to customize the index display. It uses format
+strings similar to the C function I<printf(3)> to format output. The
+default is '%4n %-22u %t'.
+
+The following sequences are defined:
+
+=over 4
+
+=item %n
+
+Current page number.
+
+=item %u
+
+The date the page was last updated, formatted with I<strftime> and the format
+defined in I<index_time_format>.
+
+=item %c
+
+The date the page was created, formatted with I<strftime> and the format
+defined in I<index_time_format>.
+
+=item %t
+
+The page title.
+
+=item %v
+
+The page version number.
+
+=back 4
+
+
 =back
 
 =head1 ENVIRONMENT
