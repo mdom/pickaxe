@@ -190,7 +190,7 @@ sub redraw ( $self, @ ) {
 }
 
 sub delete_page ( $self, $key ) {
-    display_msg "There are no pages." if !$self->pad;
+    return if $self->pages->empty;
     $self->next::method($key);
     $self->update_pad;
 }
@@ -205,7 +205,7 @@ has 'find_history'  => sub { [] };
 has project_history => sub { [] };
 
 sub find_next ( $self, $key, $direction = 1 ) {
-    display_msg "There are no pages." if !$self->pad;
+    return if $self->pages->empty;
     if ( !$self->needle ) {
         my $prompt = 'Find title' . ( $direction == -1 ? ' reverse' : '' );
         my $needle = getline( "$prompt: ", { history => $self->find_history } );
@@ -233,13 +233,13 @@ sub find_next ( $self, $key, $direction = 1 ) {
 }
 
 sub find ( $self, $key ) {
-    return if !$self->pad;
+    return if $self->pages->empty;
     $self->needle('');
     $self->find_next($key);
 }
 
 sub find_reverse ( $self, $key ) {
-    return if !$self->pad;
+    return if $self->pages->empty;
     $self->needle('');
     $self->find_next( $key, -1 );
 }
