@@ -47,8 +47,9 @@ has bindings => sub {
         O            => 'set_reverse_order',
         D            => 'delete_page',
         '/'          => 'find',
+        '<Esc>/'     => 'find_reverse',
         'n'          => 'find_next',
-        'p'          => 'find_next',
+        'N'          => 'find_next_reverse',
         '?'          => 'display_help',
         '$'          => 'update_pages',
         q            => 'quit',
@@ -160,7 +161,7 @@ sub update_pad ($self) {
     else {
         $pad = newpad( $pages->count, $COLS );
     }
-    my $x   = 0;
+    my $x = 0;
     my ( $fmt, @args ) = $self->compile_index_format;
     for my $page ( $pages->each ) {
         $page->{index} = $x;
@@ -174,7 +175,7 @@ sub update_pad ($self) {
     $self->redraw;
 }
 
-sub redraw ($self, @) {
+sub redraw ( $self, @ ) {
     return if $self->pages->empty;
     my $pages = $self->pages;
     $self->add_selection;
@@ -200,14 +201,14 @@ sub update_pages ( $self, $key ) {
 }
 
 has 'needle';
-has 'find_history' => sub { [] };
+has 'find_history'  => sub { [] };
 has project_history => sub { [] };
 
-sub find_next ( $self, $key ) {
+sub find_next ( $self, $key, $direction = 1 ) {
     display_msg "There are no pages." if !$self->pad;
     if ( !$self->needle ) {
-        my $needle =
-          getline( "Find title: ", { history => $self->find_history } );
+        my $prompt = 'Find title' . ( $direction == -1 ? ' reverse' : '' );
+        my $needle = getline( "$prompt: ", { history => $self->find_history } );
         return if !$needle;
         $needle = lc($needle);
         $self->needle($needle);
@@ -215,7 +216,12 @@ sub find_next ( $self, $key ) {
     my $needle = $self->needle;
     my @pages  = $self->pages->each;
     my $pos    = $self->pages->pos;
-    for my $i ( $pos + 1 .. @pages - 1, 0 .. $pos - 1 ) {
+
+    my @indexes =
+      $direction == -1
+      ? ( reverse( 0 .. $pos - 1 ), reverse( $pos .. @pages - 1 ) )
+      : ( $pos + 1 .. @pages - 1, 0 .. $pos );
+    for my $i (@indexes) {
         my $page = $pages[$i];
         if ( index( lc( $page->{title} ), $needle ) != -1 ) {
             $self->select( $page->{index} );
@@ -224,6 +230,22 @@ sub find_next ( $self, $key ) {
     }
     display_msg "Not found.";
     return;
+}
+
+sub find ( $self, $key ) {
+    return if !$self->pad;
+    $self->needle('');
+    $self->find_next($key);
+}
+
+sub find_reverse ( $self, $key ) {
+    return if !$self->pad;
+    $self->needle('');
+    $self->find_next( $key, -1 );
+}
+
+sub find_next_reverse ( $self, $key ) {
+    $self->find_next( $key, -1 );
 }
 
 my %sort_options = (
@@ -246,12 +268,6 @@ sub set_reverse_order ( $self, $key ) {
         $self->order("reverse_$sort_options{$order}");
         $self->set_pages( $self->pages->array );
     }
-}
-
-sub find ( $self, $key ) {
-    display_msg "There are no pages." if !$self->pad;
-    $self->needle('');
-    $self->find_next($key);
 }
 
 sub jump ( $self, $key ) {
@@ -357,15 +373,15 @@ sub search ( $self, $key ) {
 }
 
 sub switch_project ( $self, $key ) {
-    my %projects = map { $_ => 1 } @{$self->api->projects};
+    my %projects = map { $_ => 1 } @{ $self->api->projects };
     my $project  = getline(
         'Open project: ',
         {
-            history => $self->project_history,
+            history            => $self->project_history,
             completion_matches => sub ($word) {
                 $word ||= '';
                 my @completions;
-                for my $project (keys %projects) {
+                for my $project ( keys %projects ) {
                     if ( index( $project, $word ) == 0 ) {
                         push @completions, $project;
                     }
@@ -375,7 +391,7 @@ sub switch_project ( $self, $key ) {
         }
     );
     return if !$project;
-    if (!exists $projects{$project} ) {
+    if ( !exists $projects{$project} ) {
         display_msg("$project is not a project.");
         return;
     }
