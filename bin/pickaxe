@@ -1,6 +1,5 @@
 #!/usr/bin/perl
 
-# TODO reverse search direction
 # TODO Caching in API
 # TODO threaded with parents in index?
 # TODO History
@@ -89,8 +88,20 @@ Add a new wiki page
 
 =item /
 
-Find a wiki page on the current screen. See I<s> to perform a full text
+Find a wiki page by title. See I<s> to perform a full text
 search on the server.
+
+=item <Esc>/
+
+Find wiki page by title but in reverse direction.
+
+=item n
+
+Repeat previous find.
+
+=item N
+
+Repeat previous find but in reverse direction.
 
 =item b
 
@@ -137,6 +148,22 @@ Edit the current wiki page.
 =item D
 
 Delete the current wiki page.
+
+=item /
+
+Search forward for the line containing the pattern.
+
+=item <Esc>/
+
+Search backward for the line containing the pattern.
+
+=item n
+
+Repeat last search.
+
+=item N
+
+Repeat last search but in reverse direction.
 
 =item %
 

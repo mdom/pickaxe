@@ -31,7 +31,9 @@ has bindings => sub {
         '<Left>'      => 'scroll_left',
         '<Right>'     => 'scroll_right',
         '/'           => 'find',
+        '<Esc>/'      => 'find_reverse',
         'n'           => 'find_next',
+        'N'           => 'find_next_reverse',
         '<Backslash>' => 'find_toggle',
         o             => 'open_in_browser',
         J             => 'next_item',
@@ -39,6 +41,7 @@ has bindings => sub {
         D             => 'delete_page',
         '^L'          => 'force_redraw',
         'y'           => 'yank_url',
+        '?'           => 'display_help',
     };
 };
 
@@ -178,10 +181,12 @@ sub find_toggle ( $self, $key ) {
 
 has find_history => sub { [] };
 
-sub find_next ( $self, $key ) {
+## $direction == 1 is forward_search and $directon == -1 is reverse
+sub find_next ( $self, $key, $direction = 1 ) {
     if ( !$self->needle ) {
+        my $prompt = 'Find string' . ($direction == -1 ? ' reverse' : '');
         my $needle =
-          getline( "Find string: ", { history => $self->find_history } );
+          getline( "$prompt: ", { history => $self->find_history } );
         return if !$needle;
 
         $needle = lc($needle);
@@ -200,7 +205,7 @@ sub find_next ( $self, $key ) {
             my $line = $lines[$line_no];
             while ( $line =~ /\Q$needle\E/gi ) {
                 push @matches, [ $line_no, $-[0], $len ];
-                chgat( $self->pad, $line_no, $-[0], $len, A_REVERSE, 0, 0 );
+                chgat( $self->pad, @{$matches[-1]}, A_REVERSE, 0, 0 );
             }
         }
         $self->find_active(1);
@@ -220,10 +225,11 @@ sub find_next ( $self, $key ) {
         $self->set_line( $self->matches->[0]->[0], 1 );
     }
     elsif ( @{ $self->matches } > 1 ) {
+        my $shifter = $direction == -1 ? \&cycle_shift_reverse : \&cycle_shift;
         while (1) {
-            my $match = cycle_shift( $self->matches );
+            my $match = $shifter->( $self->matches );
             if ( $match->[0] != $self->current_line ) {
-                $self->set_line( $match->[0], 1 );
+                $self->set_line( $match->[0] );
                 last;
             }
         }
@@ -240,9 +246,24 @@ sub cycle_shift ($array) {
     return $elt;
 }
 
+sub cycle_shift_reverse ($array) {
+    my $elt = pop @$array;
+    unshift @$array, $elt;
+    return $elt;
+}
+
 sub find ( $self, $key ) {
     $self->needle('');
     $self->find_next($key);
+}
+
+sub find_reverse ( $self, $key ) {
+    $self->needle('');
+    $self->find_next($key, -1);
+}
+
+sub find_next_reverse ( $self, $key ) {
+    $self->find_next($key, - 1);
 }
 
 sub scroll_left ( $self, $key ) {
