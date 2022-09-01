@@ -15,6 +15,9 @@ has pass_cmd    => sub { [] };
 has yank_cmd    => sub { ['xclip'] };
 has maps        => sub { {} };
 
+has index_time_format => "%Y-%m-%d %H:%M:%S";
+has index_format      => '%4n %-22u %t';
+
 sub base_url ( $self, $url = undef ) {
     if ($url) {
         if ( $url !~ m{/$} ) {

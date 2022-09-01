@@ -68,9 +68,6 @@ has bindings => sub {
     };
 };
 
-has index_time_format => "%Y-%m-%d %H:%M:%S";
-has index_format      => '%4n %-22u %t';
-
 sub status ($self) {
     my $base = $self->config->{base_url}->clone->query( key => undef );
     return "pickaxe: $base";
@@ -96,7 +93,7 @@ sub select ( $self, $new ) {
 }
 
 sub format_time ( $self, $time ) {
-    my $strftime_fmt = $self->index_time_format;
+    my $strftime_fmt = $self->config->index_time_format;
     my $redmine_fmt  = '%Y-%m-%dT%H:%M:%SZ';
 
     # return gmtime->strptime( $time, $redmine_fmt )->strftime($strftime_fmt);
@@ -114,17 +111,17 @@ sub add_attachment ( $self, $key ) {
 }
 
 sub compile_index_format ($self) {
-    my $index_fmt = $self->index_format;
+    my $index_fmt = $self->config->index_format;
 
     my $fmt = '';
     my @args;
 
     my %identifier = (
-        n => [ d => sub { $_[0]->{index} + 1 } ],
-        t => [ s => sub { my $t = $_[0]->{title}; $t =~ s/_/ /g; $t } ],
-        u => [ s => sub { $self->format_time( $_[0]->{'updated_on'} ) } ],
-        c => [ s => sub { $self->format_time( $_[0]->{'created_on'} ) } ],
-        v => [ s => sub { $_[0]->{version} } ],
+        n => sub { $_[0]->{index} + 1 },
+        t => sub { my $t = $_[0]->{title}; $t =~ s/_/ /g; $t },
+        u => sub { $self->format_time( $_[0]->{'updated_on'} ) },
+        c => sub { $self->format_time( $_[0]->{'created_on'} ) },
+        v => sub { $_[0]->{version} },
     );
 
     while (1) {
@@ -132,8 +129,8 @@ sub compile_index_format ($self) {
             my ( $mod, $format ) = ( $1, $2 );
             $mod //= '';
             if ( my $i = $identifier{$format} ) {
-                $fmt .= "%$mod" . $i->[0];
-                push @args, $i->[1];
+                $fmt .= "%${mod}s";
+                push @args, $i;
             }
             else {
                 die "Unknown format specifier <$format>\n";

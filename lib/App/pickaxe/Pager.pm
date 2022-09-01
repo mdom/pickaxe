@@ -63,6 +63,7 @@ has 'matches';
 sub status ($self) {
     my $base  = $self->config->{base_url}->clone->query( key => undef );
     my $title = $self->pages->current->{title};
+    my $version = $self->pages->current->{title};
     my $percent;
     if ( $self->nlines == 0 ) {
         $percent = '100';
