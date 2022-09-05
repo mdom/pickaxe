@@ -8,7 +8,6 @@ use App::pickaxe::DisplayMsg 'display_msg';
 use App::pickaxe::SelectOption 'select_option', 'askyesno';
 use POSIX 'strftime';
 
-has 'pad';
 has map => 'index';
 has 'config';
 has pages => sub { App::pickaxe::Pages->new; };
@@ -73,23 +72,10 @@ sub status ($self) {
     return "pickaxe: $base";
 }
 
-sub remove_selection ($self) {
-    $self->pad->chgat( $self->pages->pos, 0, -1, A_NORMAL, 0, 0 );
-}
-
-sub add_selection ($self) {
-    $self->pad->chgat( $self->pages->pos, 0, -1, A_REVERSE, 0, 0 );
-}
 
 sub select ( $self, $new ) {
     return if $self->pages->empty;
-    my $pages = $self->pages;
-    if ( $new != $pages->pos ) {
-        $self->remove_selection;
-    }
-    $pages->seek($new);
-
-    $self->redraw;
+    $self->pages->seek($new);
 }
 
 sub format_time ( $self, $time ) {
@@ -117,7 +103,7 @@ sub compile_index_format ($self) {
     my @args;
 
     my %identifier = (
-        n => sub { $_[0]->{index} + 1 },
+        n => sub { $_[0]->{index} },
         t => sub { my $t = $_[0]->{title}; $t =~ s/_/ /g; $t },
         u => sub { $self->format_time( $_[0]->{'updated_on'} ) },
         c => sub { $self->format_time( $_[0]->{'created_on'} ) },
@@ -146,50 +132,39 @@ sub compile_index_format ($self) {
     return $fmt, @args;
 }
 
-sub update_pad ($self) {
-    my $pages = $self->pages;
-    if ( $self->pad ) {
-        $self->pad->delwin;
-    }
-    my $pad;
-    if ( $pages->empty ) {
-        $pad = newpad( $LINES, $COLS );
-    }
-    else {
-        $pad = newpad( $pages->count, $COLS );
-    }
-    my $x = 0;
-    my ( $fmt, @args ) = $self->compile_index_format;
-    for my $page ( $pages->each ) {
-        $page->{index} = $x;
-
-        my $line = sprintf( $fmt, map { $page->$_ } @args );
-        $line = substr( $line, 0, $COLS - 1 );
-        $pad->addstring( $x, 0, $line );
-        $x++;
-    }
-    $self->pad($pad);
-    $self->redraw;
-}
-
 sub redraw ( $self, @ ) {
     return if $self->pages->empty;
-    my $pages = $self->pages;
-    $self->add_selection;
+    my @pages = $self->pages->each;
 
-    my $offset = int( $pages->pos / $self->maxlines ) * $self->maxlines;
+    my $offset = $self->first_item_on_page;
 
-    erase;
     $self->next::method;
-    noutrefresh(stdscr);
-    pnoutrefresh( $self->pad, $offset, 0, 1, 0, $LINES - 3, $COLS - 1 );
-    doupdate;
+
+    my $x = 1;
+    my ( $fmt, @args ) = $self->compile_index_format;
+
+    my $last_index = $offset + $self->maxlines - 1 ;
+    if ( $last_index > @pages - 1) {
+        $last_index = @pages - 1;
+    }
+
+    for my $page ( @pages[ $offset .. $last_index ] ) {
+        $page->{index} = $offset + $x;
+
+        my $line = eval { sprintf( $fmt, map { $_->($page) } @args ) };
+        if ( $@ ) {
+            $self->dump($page);
+        }
+        $line = substr( $line, 0, $COLS - 1 );
+        addstring( $x, 0, $line );
+        $x++;
+    }
+    chgat( $self->pages->pos - $offset +1, 0, -1, A_REVERSE, 0, 0 );
 }
 
 sub delete_page ( $self, $key ) {
     return if $self->pages->empty;
     $self->next::method($key);
-    $self->update_pad;
 }
 
 sub update_pages ( $self, $key ) {
@@ -207,8 +182,7 @@ sub find_next ( $self, $key, $direction = 1 ) {
         my $prompt = 'Find title' . ( $direction == -1 ? ' reverse' : '' );
         my $needle = getline( "$prompt: ", { history => $self->find_history } );
         return if !$needle;
-        $needle = lc($needle);
-        $self->needle($needle);
+        $self->needle(lc($needle));
     }
     my $needle = $self->needle;
     my @pages  = $self->pages->each;
@@ -218,14 +192,15 @@ sub find_next ( $self, $key, $direction = 1 ) {
       $direction == -1
       ? ( reverse( 0 .. $pos - 1 ), reverse( $pos .. @pages - 1 ) )
       : ( $pos + 1 .. @pages - 1, 0 .. $pos );
+
     for my $i (@indexes) {
         my $page = $pages[$i];
         if ( index( lc( $page->{title} ), $needle ) != -1 ) {
-            $self->select( $page->{index} );
+            $self->select( $i );
             return;
         }
     }
-    display_msg "Not found.";
+    $self->message( "Not found." );
     return;
 }
 
@@ -279,9 +254,9 @@ sub jump ( $self, $key ) {
 
 sub view_page ( $self, $key ) {
     return if $self->pages->empty;
-    $self->remove_selection;
+    clear;
     $self->pager->run;
-    $self->update_pad;
+    $self->redraw;
 }
 
 sub prev_page ( $self, $key ) {
@@ -297,8 +272,8 @@ sub prev_page ( $self, $key ) {
     }
 }
 
-sub first_item_on_page ( $self, $selected ) {
-    return int( $selected / $self->maxlines ) * $self->maxlines;
+sub first_item_on_page ( $self ) {
+    return int( $self->pages->pos/ $self->maxlines ) * $self->maxlines;
 }
 
 sub next_item ( $self, $key ) {
@@ -323,8 +298,7 @@ sub last_item ( $self, $key ) {
 
 sub next_page ( $self, $key ) {
     return if $self->pages->empty;
-    my $first_item_on_page =
-      int( $self->pages->pos / $self->maxlines ) * $self->maxlines;
+    my $first_item_on_page = $self->first_item_on_page;
     if ( $self->pages->count > $first_item_on_page + $self->maxlines ) {
         $self->select( $first_item_on_page + $self->maxlines );
     }
@@ -344,8 +318,6 @@ sub set_pages ( $self, $pages ) {
     }
 
     $self->pages->replace($pages);
-
-    $self->update_pad;
 }
 
 sub search ( $self, $key ) {

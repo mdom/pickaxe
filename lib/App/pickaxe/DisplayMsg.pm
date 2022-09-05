@@ -9,7 +9,6 @@ sub display_msg ($msg) {
     clrtoeol;
     $msg = substr($msg, 0, $COLS);
     addstring($msg);
-    refresh;
 }
 
 1;

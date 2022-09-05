@@ -1,7 +1,6 @@
 package App::pickaxe::Pager;
 use Mojo::Base -signatures, 'App::pickaxe::Controller';
 use Curses;
-use App::pickaxe::DisplayMsg 'display_msg';
 use App::pickaxe::Getline 'getline';
 use IPC::Cmd 'run_forked', 'can_run';
 use Mojo::Util 'decode', 'encode';
@@ -55,14 +54,11 @@ has current_column => 0;
 
 has 'lines';
 
-has 'pad';
-
-has 'needle';
 has 'matches';
 
 sub status ($self) {
-    my $base  = $self->config->{base_url}->clone->query( key => undef );
-    my $title = $self->pages->current->{title};
+    my $base    = $self->config->{base_url}->clone->query( key => undef );
+    my $title   = $self->pages->current->{title};
     my $version = $self->pages->current->{title};
     my $percent;
     if ( $self->nlines == 0 ) {
@@ -78,7 +74,7 @@ sub next_item ( $self, $key ) {
     my $prev = $self->pages->current;
     $self->pages->next;
     if ( $prev != $self->pages->current ) {
-        $self->update_pad;
+        $self->reset;
     }
 }
 
@@ -86,132 +82,95 @@ sub prev_item ( $self, $key ) {
     my $prev = $self->pages->current;
     $self->pages->prev;
     if ( $prev != $self->pages->current ) {
-        $self->update_pad;
+        $self->reset;
     }
 }
 
 sub edit_page ( $self, $key ) {
     $self->next::method($key);
-    $self->update_pad;
-    $self->redraw;
+    $self->reset;
 }
 
-sub update_pad ($self) {
-    if ( $self->pad ) {
-        $self->pad->delwin;
-    }
-    my $cols = $COLS;
-    my $text = $self->api->text_for( $self->pages->current->{title} );
-
+sub reset ($self) {
+    my $text        = $self->api->text_for( $self->pages->current->{title} );
     my $filter_cmd  = $self->config->filter_cmd;
     my $filter_mode = $self->config->filter_mode;
     if ( $text && $filter_mode eq 'yes' && @$filter_cmd ) {
         my $result =
           run_forked( $filter_cmd, { child_stdin => encode( 'utf8', $text ) } );
-
         if ( $result->{exit_code} == 0 ) {
             $text = decode( 'utf8', $result->{stdout} );
         }
         else {
-            display_msg(
+            $self->message(
                 "Can't call " . $filter_cmd->[0] . ": " . $result->{stderr} );
         }
     }
-
     my @lines = split( "\n", $text );
-
     $self->nlines( @lines + 0 );
     $self->lines( \@lines );
     $self->current_line(0);
     $self->current_column(0);
-
     $self->matches( [] );
 
+    my $cols = 0;
     for my $line (@lines) {
         if ( length($line) > $cols ) {
             $cols = length($line);
         }
     }
-
     $self->ncolumns($cols);
-
-    my $pad = newpad( @lines + 1, $cols );
-
-    my $x = 0;
-    for my $line (@lines) {
-        addstring( $pad, $x, 0, $line ) or die "addstring: $line\n";
-        $x++;
-    }
-    $self->pad($pad);
-    $self->redraw;
-}
-
-sub DESTROY ($self) {
-    if ( $self->pad ) {
-        $self->pad->delwin;
-    }
 }
 
 sub redraw ( $self, @ ) {
-    erase;
     $self->next::method;
-    noutrefresh(stdscr);
-    pnoutrefresh( $self->pad, $self->current_line, $self->current_column, 1, 0,
-        $self->maxlines, $COLS - 1 );
-    doupdate;
+
+    my $first_line = $self->current_line;
+    my $last_line  = $first_line + $self->maxlines - 1;
+    if ( $last_line > $self->nlines - 1 ) {
+        $last_line = $self->nlines - 1;
+    }
+
+    my $x = 0;
+    for my $line ( @{ $self->lines }[ $first_line .. $last_line ] ) {
+        my $substr;
+        if ( $self->current_column <= length($line) ) {
+            $substr = substr( $line, $self->current_column,
+                $self->current_column + $COLS );
+        }
+        else {
+            $substr = '';
+        }
+        addstring( $x + 1, 0, $substr );
+        $x++;
+    }
+    if ( $self->find_active ) {
+        for my $match ( @{ $self->matches } ) {
+            next if $match->[0] < $first_line;
+            next if $match->[0] > $last_line;
+            chgat(
+                $match->[0] - $first_line + 1,
+                @$match[ 1, 2 ],
+                A_REVERSE, 0, 0
+            );
+        }
+    }
 }
 
 has find_active => 1;
 
 sub find_toggle ( $self, $key ) {
-    return if !@{ $self->matches };
-    my $style;
-    if ( $self->find_active ) {
-        $self->find_active(0);
-        $style = A_NORMAL;
-    }
-    else {
-        $self->find_active(1);
-        $style = A_REVERSE;
-    }
-    for my $match ( @{ $self->matches } ) {
-        chgat( $self->pad, @$match, $style, 0, 0 );
-    }
-    $self->redraw;
+    $self->find_active( !$self->find_active );
 }
 
 has find_history => sub { [] };
 
 ## $direction == 1 is forward_search and $directon == -1 is reverse
 sub find_next ( $self, $key, $direction = 1 ) {
-    if ( !$self->needle ) {
-        my $prompt = 'Find string' . ($direction == -1 ? ' reverse' : '');
-        my $needle =
-          getline( "$prompt: ", { history => $self->find_history } );
-        return if !$needle;
 
-        $needle = lc($needle);
-        $self->needle($needle);
-
-        my @lines = @{ $self->lines };
-        my $pos   = $self->current_line;
-
-        for my $match ( @{ $self->matches } ) {
-            chgat( $self->pad, @$match, A_NORMAL, 0, 0 );
-        }
-
-        my @matches;
-        my $len = length($needle);
-        for my $line_no ( $pos .. @lines - 1, 0 .. $pos - 1 ) {
-            my $line = $lines[$line_no];
-            while ( $line =~ /\Q$needle\E/gi ) {
-                push @matches, [ $line_no, $-[0], $len ];
-                chgat( $self->pad, @{$matches[-1]}, A_REVERSE, 0, 0 );
-            }
-        }
-        $self->find_active(1);
-        $self->matches( \@matches );
-        $self->redraw;
+    if ( !@{$self->matches} ) {
+        $self->find($key, $direction);
+        return;
     }
 
     ## find_active is always active with a new search. When we have
@@ -219,26 +178,20 @@ sub find_next ( $self, $key, $direction = 1 ) {
     ## before. So we have to toggle it back here.
 
     if ( @{ $self->matches } && !$self->find_active ) {
-        $self->find_toggle($key);
+        $self->find_active(1);
     }
 
-    if ( @{ $self->matches } == 1 ) {
-        $self->set_line( $self->matches->[0]->[0], 1 );
+    my $shifter = $direction == -1 ? \&cycle_shift_reverse : \&cycle_shift;
+    while ( $self->matches->[0]->[0] == $self->current_line ) {
+        $shifter->( $self->matches );
     }
-    elsif ( @{ $self->matches } > 1 ) {
-        my $shifter = $direction == -1 ? \&cycle_shift_reverse : \&cycle_shift;
-        while (1) {
-            my $match = $shifter->( $self->matches );
-            if ( $match->[0] != $self->current_line ) {
-                $self->set_line( $match->[0] );
-                last;
-            }
-        }
-    }
-    else {
-        display_msg "Not found.";
-    }
+    $self->set_line( $self->matches->[0]->[0] );
+
     return;
+}
+
+sub find_next_reverse ( $self, $key ) {
+    $self->find_next( $key, -1 );
 }
 
 sub cycle_shift ($array) {
@@ -253,18 +206,38 @@ sub cycle_shift_reverse ($array) {
     return $elt;
 }
 
-sub find ( $self, $key ) {
-    $self->needle('');
-    $self->find_next($key);
+sub find ( $self, $key, $direction = 0 ) {
+    my $prompt = 'Find string' . ( $direction == -1 ? ' reverse' : '' );
+    my $needle = getline( "$prompt: ", { history => $self->find_history } );
+    return if !$needle;
+
+    my @lines = @{ $self->lines };
+    my $pos   = $self->current_line;
+
+
+    my @matches;
+    my $len = length($needle);
+    for my $line_no ( $pos .. @lines - 1, 0 .. $pos - 1 ) {
+        my $line = $lines[$line_no];
+        while ( $line =~ /\Q$needle\E/gi ) {
+            push @matches, [ $line_no, $-[0], $len ];
+        }
+    }
+    if (@matches) {
+        $self->matches( \@matches );
+        $self->find_active(1);
+        $self->set_line( $matches[0][0] );
+    }
+    else {
+        $self->matches( [] );
+        $self->find_active(0);
+        $self->message("Not found.");
+    }
+    return;
 }
 
 sub find_reverse ( $self, $key ) {
-    $self->needle('');
-    $self->find_next($key, -1);
-}
-
-sub find_next_reverse ( $self, $key ) {
-    $self->find_next($key, - 1);
+    $self->find( $key, -1 );
 }
 
 sub scroll_left ( $self, $key ) {
@@ -283,8 +256,6 @@ sub set_column ( $self, $new ) {
     elsif ( $self->current_column > $self->ncolumns - $COLS / 2 ) {
         $self->current_column( $self->ncolumns - $COLS / 2 );
     }
-
-    $self->redraw;
 }
 
 sub set_line ( $self, $new ) {
@@ -295,7 +266,6 @@ sub set_line ( $self, $new ) {
     elsif ( $self->current_line > $self->nlines - 1 ) {
         $self->current_line( $self->nlines - 1 );
     }
-    $self->redraw;
 }
 
 sub toggle_filter_mode ( $self, $key ) {
@@ -304,7 +274,7 @@ sub toggle_filter_mode ( $self, $key ) {
     if ( $config->filter_mode eq 'no' ) {
         my $cmd = $config->filter_cmd->[0];
         if ( !can_run($cmd) ) {
-            display_msg("$cmd not found.");
+            $self->message("$cmd not found.");
             return;
         }
         $config->filter_mode('yes');
@@ -313,12 +283,12 @@ sub toggle_filter_mode ( $self, $key ) {
         $config->filter_mode('no');
     }
 
-    $self->update_pad;
+    $self->reset;
     if ( $config->{filter_mode} eq 'yes' ) {
-        display_msg('Filter mode enabled.');
+        $self->message('Filter mode enabled.');
     }
     else {
-        display_msg('Filter mode disabled.');
+        $self->message('Filter mode disabled.');
     }
 }
 
@@ -348,11 +318,11 @@ sub bottom ( $self, $key ) {
 
 sub delete_page ( $self, $key ) {
     $self->next::method($key);
-    $self->update_pad;
+    $self->reset;
 }
 
 sub run ($self) {
-    $self->update_pad;
+    $self->reset;
     $self->next::method;
 }
 

@@ -11,6 +11,7 @@ use App::pickaxe::Keys 'getkey';
 use Algorithm::Diff;
 
 has maxlines => sub { $LINES - 3 };
+has message  => '';
 
 has api =>
   sub { App::pickaxe::Api->new( base_url => shift->config->{base_url} ) };
@@ -210,6 +211,7 @@ sub display_help ( $self, $key ) {
 sub redraw ($self) {
     $self->update_statusbar;
     $self->update_helpbar;
+    display_msg( $self->message );
 }
 
 sub run ($self) {
@@ -217,11 +219,11 @@ sub run ($self) {
     while (1) {
         my $key = getkey;
         next if !$key;
-        display_msg('');
+        $self->message('');
         my $funcname = $self->bindings->{$key};
 
         if ( !$funcname ) {
-            display_msg("Key is not bound.");
+            $self->message('Key is not bound.');
         }
         elsif ( $funcname eq 'quit' ) {
             last;
@@ -229,6 +231,9 @@ sub run ($self) {
         else {
             $self->$funcname($key);
         }
+        erase;
+        $self->redraw;
+        refresh;
     }
 }
 
