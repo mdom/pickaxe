@@ -57,9 +57,8 @@ has 'lines';
 has 'matches';
 
 sub status ($self) {
-    my $base    = $self->config->{base_url}->clone->query( key => undef );
-    my $title   = $self->pages->current->{title};
-    my $version = $self->pages->current->{title};
+    my $base  = $self->api->base_url->clone->query( key => undef );
+    my $title = $self->pages->current->{title};
     my $percent;
     if ( $self->nlines == 0 ) {
         $percent = '100';
@@ -238,6 +237,10 @@ sub find ( $self, $key, $direction = 0 ) {
 
 sub find_reverse ( $self, $key ) {
     $self->find( $key, -1 );
+}
+
+sub find_next_reverse ( $self, $key ) {
+    $self->find_next( $key, -1 );
 }
 
 sub scroll_left ( $self, $key ) {
