@@ -259,6 +259,9 @@ sub query_connection_details ($self) {
     }
     else {
         my $username = $self->config->{username} || getline("Username: ");
+        if ( !$username ) {
+            die "No username was provided."
+        }
         my $password;
         if ( @{ $self->config->{pass_cmd} } ) {
             endwin;
@@ -269,6 +272,9 @@ sub query_connection_details ($self) {
         else {
             $password = $self->config->{password}
               || getline( "Password: ", { password => 1 } );
+        }
+        if ( !$password ) {
+            die "No password was provided."
         }
         $self->api->base_url->userinfo("$username:$password");
     }
