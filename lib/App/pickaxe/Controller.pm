@@ -255,7 +255,7 @@ sub delete_page ( $self, $key ) {
 sub query_connection_details ($self) {
     my $apikey = $self->config->{apikey} || $ENV{REDMINE_APIKEY};
     if ($apikey) {
-        $self->config->{base_url}->query( key => $apikey );
+        $self->api->base_url->query( key => $apikey );
     }
     else {
         my $username = $self->config->{username} || getline("Username: ");
@@ -270,7 +270,7 @@ sub query_connection_details ($self) {
             $password = $self->config->{password}
               || getline( "Password: ", { password => 1 } );
         }
-        $self->config->{base_url}->userinfo("$username:$password");
+        $self->api->base_url->userinfo("$username:$password");
     }
 }
 
