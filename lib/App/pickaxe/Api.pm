@@ -12,6 +12,9 @@ sub get ( $self, $path, %parameters ) {
     }
     my $res = $self->ua->get( $url => { 'Content-Type' => 'application/json' } )
           ->result;
+    if ( $res->code == 401 ) {
+        die "Authentication failed.\n";
+    }
     return $res;
 }
 

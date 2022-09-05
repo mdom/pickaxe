@@ -239,10 +239,6 @@ sub find_reverse ( $self, $key ) {
     $self->find( $key, -1 );
 }
 
-sub find_next_reverse ( $self, $key ) {
-    $self->find_next( $key, -1 );
-}
-
 sub scroll_left ( $self, $key ) {
     $self->set_column( $self->current_column - $COLS / 2 );
 }
