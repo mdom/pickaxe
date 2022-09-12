@@ -7,44 +7,8 @@ use Mojo::Util 'decode', 'encode';
 
 has help_summary => "q:Quit e:Edit /:find o:Open %:Preview D:Delete ?:help";
 
-has map => 'pager';
 has 'config';
 has 'pages';
-
-has bindings => sub {
-    return {
-        'q'           => 'quit',
-        'e'           => 'edit_page',
-        'w'           => 'create_page',
-        '<PageDown>'  => 'next_page',
-        '<Space>'     => 'next_page',
-        '<PageUp>'    => 'prev_page',
-        '<Down>'      => 'next_line',
-        '<Up>'        => 'prev_line',
-        '<Return>'    => 'next_line',
-        '<Backspace>' => 'prev_line',
-        '<Resize>'    => 'redraw',
-        '%'           => 'toggle_filter_mode',
-        '<Home>'      => 'top',
-        '<End>'       => 'bottom',
-        '<Left>'      => 'scroll_left',
-        '<Right>'     => 'scroll_right',
-        '/'           => 'find',
-        '<Esc>/'      => 'find_reverse',
-        'n'           => 'find_next',
-        'N'           => 'find_next_reverse',
-        '<Backslash>' => 'find_toggle',
-        o             => 'open_in_browser',
-        J             => 'next_item',
-        K             => 'prev_item',
-        D             => 'delete_page',
-        '^L'          => 'force_redraw',
-        'y'           => 'yank_url',
-        '?'           => 'display_help',
-    };
-};
-
-has 'index';
 
 has nlines   => 0;
 has ncolumns => 0;

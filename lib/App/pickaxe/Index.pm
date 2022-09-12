@@ -8,7 +8,6 @@ use App::pickaxe::DisplayMsg 'display_msg';
 use App::pickaxe::SelectOption 'select_option', 'askyesno';
 use POSIX 'strftime';
 
-has map => 'index';
 has 'config';
 has pages => sub { App::pickaxe::Pages->new; };
 
@@ -20,52 +19,6 @@ has help_summary =>
   "q:Quit a:Add e:Edit s:Search /:find b:Browse o:Order D:delete ?:help";
 
 has 'order' => 'reverse_updated_on';
-
-has bindings => sub {
-    return {
-        '<End>'      => 'last_item',
-        '<Home>'     => 'first_item',
-        '<Down>'     => 'next_item',
-        '<Up>'       => 'prev_item',
-        j            => 'next_item',
-        k            => 'prev_item',
-        e            => 'edit_page',
-        a            => 'add_page',
-        A            => 'add_attachment',
-        b            => 'open_in_browser',
-        c            => 'switch_project',
-        '<Return>'   => 'view_page',
-        '<PageDown>' => 'next_page',
-        '<PageUp>'   => 'prev_page',
-        '<Left>'     => 'prev_page',
-        '<Right>'    => 'next_page',
-        '<Space>'    => 'next_page',
-        '<Resize>'   => 'redraw',
-        s            => 'search',
-        o            => 'set_order',
-        O            => 'set_reverse_order',
-        D            => 'delete_page',
-        '/'          => 'find',
-        '<Esc>/'     => 'find_reverse',
-        'n'          => 'find_next',
-        'N'          => 'find_next_reverse',
-        '?'          => 'display_help',
-        '$'          => 'update_pages',
-        q            => 'quit',
-        1            => 'jump',
-        2            => 'jump',
-        3            => 'jump',
-        4            => 'jump',
-        5            => 'jump',
-        6            => 'jump',
-        7            => 'jump',
-        8            => 'jump',
-        9            => 'jump',
-        0            => 'jump',
-        '^L'         => 'force_redraw',
-        'y'          => 'yank_url',
-    };
-};
 
 sub status ($self) {
     my $base = $self->config->{base_url}->clone->query( key => undef );
