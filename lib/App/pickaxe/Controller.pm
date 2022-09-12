@@ -220,7 +220,10 @@ sub run ($self) {
         my $key = getkey;
         next if !$key;
         $self->message('');
-        my $funcname = $self->bindings->{$key};
+
+        my $map = lc(ref($self));
+        $map =~ s/.*:://;
+        my $funcname = $self->config->keybindings->{$map}->{$key};
 
         if ( !$funcname ) {
             $self->message('Key is not bound.');
@@ -263,7 +266,7 @@ sub query_connection_details ($self) {
             die "No username was provided."
         }
         my $password;
-        if ( @{ $self->config->{pass_cmd} } ) {
+        if ( @{ $self->config->pass_cmd } ) {
             endwin;
             my $cmd = "@{$self->config->{pass_cmd}}";
             $password = qx($cmd);
