@@ -9,16 +9,14 @@ has help_summary => "q:Quit e:Edit /:find o:Open %:Preview D:Delete ?:help";
 
 has 'config';
 has 'pages';
+has 'lines';
+has 'matches';
 
-has nlines   => 0;
-has ncolumns => 0;
-
+has nlines         => 0;
+has ncolumns       => 0;
 has current_line   => 0;
 has current_column => 0;
-
-has 'lines';
-
-has 'matches';
+has find_active    => 1;
 
 sub status ($self) {
     my $base  = $self->api->base_url->clone->query( key => undef );
@@ -120,8 +118,6 @@ sub redraw ( $self, @ ) {
     }
 }
 
-has find_active => 1;
-
 sub find_toggle ( $self, $key ) {
     $self->find_active( !$self->find_active );
 }
@@ -129,8 +125,8 @@ sub find_toggle ( $self, $key ) {
 ## $direction == 1 is forward_search and $directon == -1 is reverse
 sub find_next ( $self, $key, $direction = 1 ) {
 
-    if ( !@{$self->matches} ) {
-        $self->find($key, $direction);
+    if ( !@{ $self->matches } ) {
+        $self->find( $key, $direction );
         return;
     }
 

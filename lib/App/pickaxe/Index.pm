@@ -20,11 +20,12 @@ has help_summary =>
 
 has 'order' => 'reverse_updated_on';
 
+has 'needle';
+
 sub status ($self) {
     my $base = $self->config->{base_url}->clone->query( key => undef );
     return "pickaxe: $base";
 }
-
 
 sub select ( $self, $new ) {
     return if $self->pages->empty;
@@ -96,23 +97,25 @@ sub redraw ( $self, @ ) {
     my $x = 1;
     my ( $fmt, @args ) = $self->compile_index_format;
 
-    my $last_index = $offset + $self->maxlines - 1 ;
-    if ( $last_index > @pages - 1) {
+    my $last_index = $offset + $self->maxlines - 1;
+    if ( $last_index > @pages - 1 ) {
         $last_index = @pages - 1;
     }
 
     for my $page ( @pages[ $offset .. $last_index ] ) {
         $page->{index} = $offset + $x;
 
-        my $line = eval { sprintf( $fmt, map { $_->($page) } @args ) };
-        if ( $@ ) {
+        my $line = eval {
+            sprintf( $fmt, map { $_->($page) } @args );
+        };
+        if ($@) {
             $self->dump($page);
         }
         $line = substr( $line, 0, $COLS - 1 );
         addstring( $x, 0, $line );
         $x++;
     }
-    chgat( $self->pages->pos - $offset +1, 0, -1, A_REVERSE, 0, 0 );
+    chgat( $self->pages->pos - $offset + 1, 0, -1, A_REVERSE, 0, 0 );
 }
 
 sub delete_page ( $self, $key ) {
@@ -125,7 +128,6 @@ sub update_pages ( $self, $key ) {
     display_msg("Updated.");
 }
 
-has 'needle';
 sub find_next ( $self, $key, $direction = 1 ) {
     return if $self->pages->empty;
     if ( !$self->needle ) {
@@ -133,7 +135,7 @@ sub find_next ( $self, $key, $direction = 1 ) {
         state $history = [];
         my $needle = getline( "$prompt: ", { history => $history } );
         return if !$needle;
-        $self->needle(lc($needle));
+        $self->needle( lc($needle) );
     }
     my $needle = $self->needle;
     my @pages  = $self->pages->each;
@@ -147,11 +149,11 @@ sub find_next ( $self, $key, $direction = 1 ) {
     for my $i (@indexes) {
         my $page = $pages[$i];
         if ( index( lc( $page->{title} ), $needle ) != -1 ) {
-            $self->select( $i );
+            $self->select($i);
             return;
         }
     }
-    $self->message( "Not found." );
+    $self->message("Not found.");
     return;
 }
 
