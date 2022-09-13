@@ -209,6 +209,7 @@ sub display_help ( $self, $key ) {
 }
 
 sub redraw ($self) {
+    erase;
     $self->update_statusbar;
     $self->update_helpbar;
     display_msg( $self->message );
@@ -234,7 +235,6 @@ sub run ($self) {
         else {
             $self->$funcname($key);
         }
-        erase;
         $self->redraw;
         refresh;
     }

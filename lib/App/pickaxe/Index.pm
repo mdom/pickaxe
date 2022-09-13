@@ -87,12 +87,13 @@ sub compile_index_format ($self) {
 }
 
 sub redraw ( $self, @ ) {
+    $self->next::method;
     return if $self->pages->empty;
+
     my @pages = $self->pages->each;
 
     my $offset = $self->first_item_on_page;
 
-    $self->next::method;
 
     my $x = 1;
     my ( $fmt, @args ) = $self->compile_index_format;
@@ -205,7 +206,6 @@ sub jump ( $self, $key ) {
 
 sub view_page ( $self, $key ) {
     return if $self->pages->empty;
-    clear;
     $self->pager->run;
     $self->redraw;
 }
