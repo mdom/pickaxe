@@ -156,13 +156,11 @@ sub find_next ( $self, $key, $direction = 1 ) {
 }
 
 sub find ( $self, $key ) {
-    return if $self->pages->empty;
     $self->needle('');
     $self->find_next($key);
 }
 
 sub find_reverse ( $self, $key ) {
-    return if $self->pages->empty;
     $self->needle('');
     $self->find_next( $key, -1 );
 }
@@ -223,27 +221,23 @@ sub prev_page ( $self, $key ) {
     }
 }
 
-sub first_item_on_page ( $self ) {
-    return int( $self->pages->pos/ $self->maxlines ) * $self->maxlines;
+sub first_item_on_page ($self) {
+    return int( $self->pages->pos / $self->maxlines ) * $self->maxlines;
 }
 
 sub next_item ( $self, $key ) {
-    return if $self->pages->empty;
     $self->select( $self->pages->pos + 1 );
 }
 
 sub prev_item ( $self, $key ) {
-    return if $self->pages->empty;
     $self->select( $self->pages->pos - 1 );
 }
 
 sub first_item ( $self, $key ) {
-    return if $self->pages->empty;
     $self->select(0);
 }
 
 sub last_item ( $self, $key ) {
-    return if $self->pages->empty;
     $self->select( $self->pages->count - 1 );
 }
 
