@@ -126,14 +126,12 @@ sub update_pages ( $self, $key ) {
 }
 
 has 'needle';
-has 'find_history'  => sub { [] };
-has project_history => sub { [] };
-
 sub find_next ( $self, $key, $direction = 1 ) {
     return if $self->pages->empty;
     if ( !$self->needle ) {
         my $prompt = 'Find title' . ( $direction == -1 ? ' reverse' : '' );
-        my $needle = getline( "$prompt: ", { history => $self->find_history } );
+        state $history = [];
+        my $needle = getline( "$prompt: ", { history => $history } );
         return if !$needle;
         $self->needle(lc($needle));
     }
@@ -274,8 +272,9 @@ sub set_pages ( $self, $pages ) {
 }
 
 sub search ( $self, $key ) {
-    my $query = getline( "Search for pages matching: ",
-        { history => $self->find_history } );
+    state $history = [];
+    my $query =
+      getline( "Search for pages matching: ", { history => $history } );
     if ( $query eq 'all' ) {
         $self->set_pages( $self->api->pages );
     }
@@ -296,10 +295,11 @@ sub search ( $self, $key ) {
 
 sub switch_project ( $self, $key ) {
     my %projects = map { $_ => 1 } @{ $self->api->projects };
-    my $project  = getline(
+    state $history = [];
+    my $project = getline(
         'Open project: ',
         {
-            history            => $self->project_history,
+            history            => $history,
             completion_matches => sub ($word) {
                 $word ||= '';
                 my @completions;

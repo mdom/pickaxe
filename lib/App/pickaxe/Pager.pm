@@ -126,8 +126,6 @@ sub find_toggle ( $self, $key ) {
     $self->find_active( !$self->find_active );
 }
 
-has find_history => sub { [] };
-
 ## $direction == 1 is forward_search and $directon == -1 is reverse
 sub find_next ( $self, $key, $direction = 1 ) {
 
@@ -171,12 +169,12 @@ sub cycle_shift_reverse ($array) {
 
 sub find ( $self, $key, $direction = 0 ) {
     my $prompt = 'Find string' . ( $direction == -1 ? ' reverse' : '' );
-    my $needle = getline( "$prompt: ", { history => $self->find_history } );
+    state $history = [];
+    my $needle = getline( "$prompt: ", { history => $history } );
     return if !$needle;
 
     my @lines = @{ $self->lines };
     my $pos   = $self->current_line;
-
 
     my @matches;
     my $len = length($needle);
