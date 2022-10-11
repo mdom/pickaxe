@@ -53,7 +53,7 @@ sub edit_page ( $self, $key ) {
 }
 
 sub reset ($self) {
-    my $text        = $self->api->text_for( $self->pages->current->{title} );
+    my $text        = $self->pages->current->text;
     my $filter_cmd  = $self->config->filter_cmd;
     my $filter_mode = $self->config->filter_mode;
     if ( $text && $filter_mode eq 'yes' && @$filter_cmd ) {
