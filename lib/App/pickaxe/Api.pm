@@ -18,16 +18,6 @@ sub get ( $self, $path, %parameters ) {
     return $res;
 }
 
-sub url_for ( $self, $title ) {
-    my $url = $self->base_url->clone->path("wiki/$title");
-    $url->query( key => undef );
-    return $url->to_string;
-}
-
-sub text_for ( $self, $title ) {
-    $self->page($title)->{text};
-}
-
 sub save ( $self, $title, $text, $version = undef ) {
     my $url = $self->base_url->clone->path("wiki/$title.json");
 
@@ -62,7 +52,8 @@ sub delete ( $self, $title ) {
 sub pages ($self) {
     my $res = $self->get("wiki/index.json");
     if ( $res->is_success ) {
-        return $res->json->{wiki_pages};
+        return
+          [ map { App::pickaxe::Api::Page->new($_)->api($self) } @{ $res->json->{wiki_pages} } ];
     }
     return [];
 }
@@ -70,7 +61,7 @@ sub pages ($self) {
 sub page ( $self, $title ) {
     my $res = $self->get("wiki/$title.json");
     if ( $res->is_success ) {
-        return $res->json->{wiki_page};
+        return App::pickaxe::Api::Page->new($res->json->{wiki_page})->api($self);
     }
     return;
 }
@@ -119,6 +110,7 @@ sub projects ($self) {
 }
 
 sub search ( $self, $query ) {
+    my %pages = map { $_->{title} => $_ } @{ $self->pages };
     my $res = $self->get(
         "search.json",
         q          => $query,
@@ -148,10 +140,44 @@ sub search ( $self, $query ) {
         push @matching_pages, @{ $data->{results} };
     }
 
-    my %pages = map { $_->{title} => $_ } @{ $self->pages };
-    @matching_pages =
-      map { $pages{ $_->{title} =~ s/^Wiki: //r } } @matching_pages;
+    for my $page (@matching_pages) {
+      $page->{title} =~ s/^Wiki: //;
+      $page = { %$page, %{ $pages{ $page->{title} }}};
+      $page->{text} = delete $page->{description};
+      delete $page->{datetime};
+      $page = App::pickaxe::Api::Page->new($page)->api($self);
+    }
     return \@matching_pages;
 }
+
+package App::pickaxe::Api::Page;
+use Mojo::Base -base, -signatures;
+
+has 'title';
+has 'version';
+has 'created_on';
+has 'updated_on';
+
+has 'parent';
+has 'author';
+has 'comments';
+
+has 'api', undef, weak => 1;
+
+has 'text' => sub ($self ) {
+    my $version = $self->version;
+    my $title = $self->title;
+    my $res = $self->api->get("wiki/$title/$version.json");
+    if ( $res->is_success ) {
+        return $res->json->{wiki_page}->{text};
+    }
+    return '';
+};
+
+sub url ( $self ) {
+    my $url = $self->api->base_url->clone->path("wiki/" . $self->title);
+    $url->query( key => undef );
+    return $url->to_string;
+};
 
 1;
