@@ -66,7 +66,7 @@ sub render_text ($self, $text) {
     $text = html_unescape($text);
 
     # Remove header ids
-    $text =~ s/^h(\d)\(.*?\)\./h\1./gms;
+    $text =~ s/^h(\d)\(.*?\)\./h$1./gms;
 
     ## Collapse empty lines;
     $text =~ s/\n{3,}/\n\n\n/gs;
