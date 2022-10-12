@@ -9,8 +9,6 @@ use Curses;
 has 'username';
 has 'password';
 
-has filter_cmd  => sub { [qw(pandoc -f textile -t plain)] };
-has filter_mode => 'no';
 has pass_cmd    => sub { [] };
 has yank_cmd    => sub { ['xclip'] };
 has keybindings => sub {
@@ -70,7 +68,6 @@ has keybindings => sub {
             '<Return>'    => 'next_line',
             '<Backspace>' => 'prev_line',
             '<Resize>'    => 'redraw',
-            '%'           => 'toggle_filter_mode',
             '<Home>'      => 'top',
             '<End>'       => 'bottom',
             '<Left>'      => 'scroll_left',
