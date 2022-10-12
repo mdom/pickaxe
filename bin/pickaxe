@@ -207,7 +207,6 @@ The set command is used to changed configuration variables. It takes the
 variable name and its new value as arguments. For example:
 
     set pass_cmd pass mdom@example.org
-    set filter_mode yes
 
 The following variables are valid:
 
@@ -217,17 +216,6 @@ The following variables are valid:
 
 Command to get the users password. It should return the
 password on stdout on a sinlge line.  There is no default.
-
-=item filter_cmd
-
-Command to filter wiki pages. It should read the page as textile on
-stdin and return a filtered version on stdout. This command defaults to
-I<pandoc -f textfile -t plain>
-
-=item filter_mode
-
-Set to I<yes> if you want to filter wiki pages automatically. Defaults
-to I<no>.
 
 =item yank_cmd
 

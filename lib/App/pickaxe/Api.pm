@@ -169,7 +169,9 @@ has 'text' => sub ($self ) {
     my $title = $self->title;
     my $res = $self->api->get("wiki/$title/$version.json");
     if ( $res->is_success ) {
-        return $res->json->{wiki_page}->{text};
+        my $text = $res->json->{wiki_page}->{text};
+        $text =~ s/\r\n/\n/gs;
+        return $text;
     }
     return '';
 };

@@ -2,8 +2,9 @@ package App::pickaxe::Pager;
 use Mojo::Base -signatures, 'App::pickaxe::Controller';
 use Curses;
 use App::pickaxe::Getline 'getline';
-use IPC::Cmd 'run_forked', 'can_run';
 use Mojo::Util 'decode', 'encode';
+use Text::Wrap 'wrap';
+use Mojo::Util 'html_unescape';
 
 has help_summary => "q:Quit e:Edit /:find o:Open %:Preview D:Delete ?:help";
 
@@ -52,22 +53,52 @@ sub edit_page ( $self, $key ) {
     $self->reset;
 }
 
-sub reset ($self) {
-    my $text        = $self->pages->current->text;
-    my $filter_cmd  = $self->config->filter_cmd;
-    my $filter_mode = $self->config->filter_mode;
-    if ( $text && $filter_mode eq 'yes' && @$filter_cmd ) {
-        my $result =
-          run_forked( $filter_cmd, { child_stdin => encode( 'utf8', $text ) } );
-        if ( $result->{exit_code} == 0 ) {
-            $text = decode( 'utf8', $result->{stdout} );
+sub render_text ($self, $text) {
+
+    ## Move <pre> to it's own line
+    $text =~ s/^(\S+)(<\/?pre>)/$1\n$2/gms;
+    $text =~ s/(<\/?pre>)(\S+)$/$1\n$2/gms;
+
+    ## Remove empty lists
+    $text =~ s/^\s*[\*\#]\s*\n//gmsx;
+
+    ## Unscape html entities
+    $text = html_unescape($text);
+
+    # Remove header ids
+    $text =~ s/^h(\d)\(.*?\)\./h\1./gms;
+
+    ## Collapse empty lines;
+    $text =~ s/\n{3,}/\n\n\n/gs;
+
+    my $pre_mode = 0;
+    my @lines;
+    for my $line ( split( "\n", $text )) {
+        if ( $line =~ /<pre>/) {
+            $pre_mode = 1;
+        }
+        elsif ( $line =~ /<\/pre>/) {
+            $pre_mode = 0;
+        }
+        elsif ( $pre_mode ) {
+            push @lines, "    " . $line;
+        }
+        elsif ( $line =~ /^(\s*[\*\#]\s*)\S/ ) { 
+            push @lines, split("\n",  wrap('', ' ' x length($1), $line)); 
+        }
+        elsif ( $line eq '' ) {
+            push @lines, $line;
         }
         else {
-            $self->message(
-                "Can't call " . $filter_cmd->[0] . ": " . $result->{stderr} );
+            $line =~ /^(\s*)/;
+            push @lines, split("\n",  wrap($1, $1, $line)); 
         }
     }
-    my @lines = split( "\n", $text );
+    return @lines;
+};
+
+sub reset ($self) {
+    my @lines = $self->render_text( $self->pages->current->text );
     $self->nlines( @lines + 0 );
     $self->lines( \@lines );
     $self->current_line(0);
@@ -222,30 +253,6 @@ sub set_line ( $self, $new ) {
     }
     elsif ( $self->current_line > $self->nlines - 1 ) {
         $self->current_line( $self->nlines - 1 );
-    }
-}
-
-sub toggle_filter_mode ( $self, $key ) {
-    my $config = $self->config;
-
-    if ( $config->filter_mode eq 'no' ) {
-        my $cmd = $config->filter_cmd->[0];
-        if ( !can_run($cmd) ) {
-            $self->message("$cmd not found.");
-            return;
-        }
-        $config->filter_mode('yes');
-    }
-    else {
-        $config->filter_mode('no');
-    }
-
-    $self->reset;
-    if ( $config->{filter_mode} eq 'yes' ) {
-        $self->message('Filter mode enabled.');
-    }
-    else {
-        $self->message('Filter mode disabled.');
     }
 }
 
