@@ -4,7 +4,7 @@ use Curses;
 use App::pickaxe::Getline 'getline';
 use Mojo::Util 'decode', 'encode';
 use Text::Wrap 'wrap';
-use Mojo::Util 'html_unescape';
+use Mojo::Util 'html_unescape', 'tablify';
 
 has help_summary => "q:Quit e:Edit /:find o:Open %:Preview D:Delete ?:help";
 
@@ -53,7 +53,7 @@ sub edit_page ( $self, $key ) {
     $self->reset;
 }
 
-sub render_text ($self, $text) {
+sub render_text ( $self, $text ) {
 
     ## Move <pre> to it's own line
     $text =~ s/^(\S+)(<\/?pre>)/$1\n$2/gms;
@@ -71,31 +71,44 @@ sub render_text ($self, $text) {
     ## Collapse empty lines;
     $text =~ s/\n{3,}/\n\n\n/gs;
 
+    my @table;
     my $pre_mode = 0;
     my @lines;
-    for my $line ( split( "\n", $text )) {
-        if ( $line =~ /<pre>/) {
+    for my $line ( split( "\n", $text ) ) {
+        if ( $line =~ /<pre>/ ) {
             $pre_mode = 1;
         }
-        elsif ( $line =~ /<\/pre>/) {
+        elsif ( $line =~ /<\/pre>/ ) {
             $pre_mode = 0;
         }
-        elsif ( $pre_mode ) {
+        elsif ($pre_mode) {
             push @lines, "    " . $line;
         }
-        elsif ( $line =~ /^(\s*[\*\#]\s*)\S/ ) { 
-            push @lines, split("\n",  wrap('', ' ' x length($1), $line)); 
+        elsif ( $line =~ /^\s*\|(.*)\|\s*$/ ) {
+            push @table,
+              [ map { s/_\.//; s/^\s*//; s/\s*$//; $_ } split( '\|', $1 ) ];
+        }
+        elsif (@table) {
+            push @lines, split( "\n", tablify( \@table ) );
+            undef @table;
+            redo;
+        }
+        elsif ( $line =~ /^(\s*[\*\#]\s*)\S/ ) {
+            push @lines, split( "\n", wrap( '', ' ' x length($1), $line ) );
         }
         elsif ( $line eq '' ) {
             push @lines, $line;
         }
         else {
             $line =~ /^(\s*)/;
-            push @lines, split("\n",  wrap($1, $1, $line)); 
+            push @lines, split( "\n", wrap( $1, $1, $line ) );
         }
     }
+    if (@table) {
+        push @lines, split( "\n", tablify( \@table ) );
+    }
     return @lines;
-};
+}
 
 sub reset ($self) {
     my @lines = $self->render_text( $self->pages->current->text );
