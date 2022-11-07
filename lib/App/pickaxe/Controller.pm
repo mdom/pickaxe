@@ -38,7 +38,8 @@ sub yank_url ( $self, @ ) {
 }
 
 sub add_page ( $self, $key ) {
-    my $title = getline( "Page name: ", { history => $self->find_history } );
+    state $history = [];
+    my $title = getline( "Page name: ", { history => $history } );
     if ( !$title ) {
         display_msg("Aborted.");
         return;
