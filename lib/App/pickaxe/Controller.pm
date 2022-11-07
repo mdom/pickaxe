@@ -19,8 +19,7 @@ has api =>
 sub open_in_browser ( $self, $key ) {
     return if $self->pages->empty;
     use IPC::Cmd;
-    my $title = $self->pages->current->{title};
-    IPC::Cmd::run( command => [ 'xdg-open', $self->api->url_for($title) ] );
+    IPC::Cmd::run( command => [ 'xdg-open', $self->pages->current->url ] );
 }
 
 sub dump ( $self, $data ) {
@@ -30,7 +29,7 @@ sub dump ( $self, $data ) {
 }
 
 sub yank_url ( $self, @ ) {
-    my $url = $self->api->url_for( $self->pages->current->{title} );
+    my $url = $self->pages->current->url;
     open( my $xclip, '|-', @{ $self->config->yank_cmd } )
       or display_msg("Can't yank url: $!");
     print $xclip $url;
