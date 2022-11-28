@@ -144,6 +144,7 @@ sub search ( $self, $query ) {
       $page->{title} =~ s/^Wiki: //;
       $page = { %$page, %{ $pages{ $page->{title} }}};
       $page->{text} = delete $page->{description};
+      $page->{text} =~ s/\r\n/\n/gs;
       delete $page->{datetime};
       $page = App::pickaxe::Api::Page->new($page)->api($self);
     }
