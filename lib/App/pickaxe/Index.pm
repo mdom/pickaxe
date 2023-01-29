@@ -243,7 +243,7 @@ sub last_item ( $self, $key ) {
     $self->select( $self->pages->count - 1 );
 }
 
-sub next_page ( $self, $key ) {
+sub next_screen ( $self, $key ) {
     return if $self->pages->empty;
     my $first_item_on_page = $self->first_item_on_page;
     if ( $self->pages->count > $first_item_on_page + $self->maxlines ) {
