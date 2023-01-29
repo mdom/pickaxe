@@ -89,4 +89,11 @@ del '/projects/foo/wiki/#title', [ format => ['json' ]] => sub {
     $c->render( status => 204, text => '' );
 };
 
+get '/projects/foo/search', [ format => ['json' ]] => sub {
+    my $c = shift;
+    my $q = $c->param('q');
+    my @result = grep { $_->{text} =~ $q } values %pages;
+    $c->render( json => { wiki_pages => \@result } );
+};
+
 app->start;
