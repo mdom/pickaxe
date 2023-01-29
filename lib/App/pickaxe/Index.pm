@@ -81,7 +81,7 @@ sub compile_index_format ($self) {
     return $fmt, @args;
 }
 
-sub redraw ( $self, @ ) {
+sub render ( $self, @ ) {
     $self->next::method;
     return if $self->pages->empty;
 
@@ -202,7 +202,7 @@ sub jump ( $self, $key ) {
 sub view_page ( $self, $key ) {
     return if $self->pages->empty;
     $self->pager->run;
-    $self->redraw;
+    $self->render;
 }
 
 sub prev_page ( $self, $key ) {
@@ -223,11 +223,11 @@ sub first_item_on_page ($self) {
 }
 
 sub next_item ( $self, $key ) {
-    $self->pages->select( $self->pages->pos + 1 );
+    $self->pages->next;
 }
 
 sub prev_item ( $self, $key ) {
-    $self->pages->select( $self->pages->pos - 1 );
+    $self->pages->prev;
 }
 
 sub first_item ( $self, $key ) {
