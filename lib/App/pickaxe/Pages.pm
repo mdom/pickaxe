@@ -5,7 +5,8 @@ has array  => sub { [] };
 has pos    => 0;
 has oldpos => 0;
 
-sub seek ( $self, $offset ) {
+sub select ( $self, $offset ) {
+    return if $self->empty;
     $self->oldpos( $self->pos );
     $self->pos($offset);
     if ( $self->pos < 0 ) {
@@ -19,7 +20,7 @@ sub seek ( $self, $offset ) {
 
 sub delete ( $self ) {
     splice(@{$self->array}, $self->pos, 1 );
-    $self->seek( $self->pos );
+    $self->select( $self->pos );
 }
 
 sub replace ($self, $pages) {
@@ -29,7 +30,7 @@ sub replace ($self, $pages) {
 }
 
 sub next ($self) {
-    $self->seek( $self->pos + 1 );
+    $self->select( $self->pos + 1 );
 }
 
 sub each ($self) {
@@ -37,7 +38,7 @@ sub each ($self) {
 }
 
 sub prev ($self) {
-    $self->seek( $self->pos - 1 );
+    $self->select( $self->pos - 1 );
 }
 
 sub current ($self) {
@@ -49,7 +50,7 @@ sub set ( $self, $elt ) {
 }
 
 sub rewind ($self) {
-    $self->seek(0);
+    $self->select(0);
 }
 
 sub count ($self) {

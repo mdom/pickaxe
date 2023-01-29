@@ -27,11 +27,6 @@ sub status ($self) {
     return "pickaxe: $base";
 }
 
-sub select ( $self, $new ) {
-    return if $self->pages->empty;
-    $self->pages->seek($new);
-}
-
 sub format_time ( $self, $time ) {
     my $strftime_fmt = $self->config->index_time_format;
     my $redmine_fmt  = '%Y-%m-%dT%H:%M:%SZ';
@@ -150,7 +145,7 @@ sub find_next ( $self, $key, $direction = 1 ) {
     for my $i (@indexes) {
         my $page = $pages[$i];
         if ( index( lc( $page->{title} ), $needle ) != -1 ) {
-            $self->select($i);
+            $self->pages->select($i);
             return;
         }
     }
@@ -201,7 +196,7 @@ sub jump ( $self, $key ) {
         display_msg("Argument must be a number.");
         return;
     }
-    $self->select( $number - 1 );
+    $self->pages->select( $number - 1 );
 }
 
 sub view_page ( $self, $key ) {
@@ -216,10 +211,10 @@ sub prev_page ( $self, $key ) {
     my $last_item_on_page =
       int( $pages->pos / $self->maxlines ) * $self->maxlines - 1;
     if ( $last_item_on_page < 0 ) {
-        $self->select(0);
+        $self->pages->select(0);
     }
     else {
-        $self->select($last_item_on_page);
+        $self->pages->select($last_item_on_page);
     }
 }
 
@@ -228,29 +223,29 @@ sub first_item_on_page ($self) {
 }
 
 sub next_item ( $self, $key ) {
-    $self->select( $self->pages->pos + 1 );
+    $self->pages->select( $self->pages->pos + 1 );
 }
 
 sub prev_item ( $self, $key ) {
-    $self->select( $self->pages->pos - 1 );
+    $self->pages->select( $self->pages->pos - 1 );
 }
 
 sub first_item ( $self, $key ) {
-    $self->select(0);
+    $self->pages->select(0);
 }
 
 sub last_item ( $self, $key ) {
-    $self->select( $self->pages->count - 1 );
+    $self->pages->select( $self->pages->count - 1 );
 }
 
 sub next_screen ( $self, $key ) {
     return if $self->pages->empty;
     my $first_item_on_page = $self->first_item_on_page;
     if ( $self->pages->count > $first_item_on_page + $self->maxlines ) {
-        $self->select( $first_item_on_page + $self->maxlines );
+        $self->pages->select( $first_item_on_page + $self->maxlines );
     }
     else {
-        $self->select( $self->pages->count - 1 );
+        $self->pages->select( $self->pages->count - 1 );
     }
 }
 
