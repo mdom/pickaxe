@@ -277,7 +277,7 @@ sub prev_line ( $self, $key ) {
     $self->set_line( $self->current_line - 1 );
 }
 
-sub next_page ( $self, $key ) {
+sub next_screen ( $self, $key ) {
     $self->set_line( $self->current_line + $self->maxlines );
 }
 
