@@ -127,7 +127,7 @@ sub reset ($self) {
     $self->ncolumns($cols);
 }
 
-sub redraw ( $self, @ ) {
+sub render ( $self, @ ) {
     $self->next::method;
 
     my $first_line = $self->current_line;

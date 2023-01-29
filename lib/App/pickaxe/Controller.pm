@@ -65,9 +65,9 @@ sub add_page ( $self, $key ) {
     }
 }
 
-sub force_redraw ( $self, @ ) {
+sub force_render ( $self, @ ) {
     clearok( stdscr, 1 );
-    $self->redraw;
+    $self->render;
 }
 
 sub save_page ( $self, $title, $new_text, $version = undef ) {
@@ -174,7 +174,7 @@ sub call_editor ( $self, $file ) {
     endwin;
     my $editor = $ENV{VISUAL} || $ENV{EDITOR} || 'vi';
     system( $editor, $file->to_string );
-    $self->redraw;
+    $self->render;
     return decode( 'utf8', $file->slurp );
 }
 
@@ -208,7 +208,7 @@ sub display_help ( $self, $key ) {
     refresh;
 }
 
-sub redraw ($self) {
+sub render ($self) {
     erase;
     $self->update_statusbar;
     $self->update_helpbar;
@@ -216,7 +216,7 @@ sub redraw ($self) {
 }
 
 sub run ($self) {
-    $self->redraw;
+    $self->render;
     while (1) {
         my $key = getkey;
         next if !$key;
@@ -235,7 +235,7 @@ sub run ($self) {
         else {
             $self->$funcname($key);
         }
-        $self->redraw;
+        $self->render;
         refresh;
     }
 }
