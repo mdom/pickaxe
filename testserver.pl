@@ -11,31 +11,31 @@ my %pages;
 
 my @files = path($dir)->list->grep(qr/\.txt$/)->each;
 
-for my $file ( @files ) {
-    my $basename = decode( 'utf-8', $file->basename('.txt'));
-    my $mtime = Mojo::Date->new($file->stat->mtime)->to_datetime;
-    my ($uid,$name) = (getpwuid($file->stat->uid))[2,6];
+for my $file (@files) {
+    my $basename = decode( 'utf-8', $file->basename('.txt') );
+    my $mtime    = Mojo::Date->new( $file->stat->mtime )->to_datetime;
+    my ( $uid, $name ) = ( getpwuid( $file->stat->uid ) )[ 2, 6 ];
 
-    $pages{ $basename } = {
-        title => $basename,
-        text  => decode('utf-8', $file->slurp),
-        author => { id => $uid, name => $name },
-        comments => '',
+    $pages{$basename} = {
+        title      => $basename,
+        text       => decode( 'utf-8', $file->slurp ),
+        author     => { id => $uid, name => $name },
+        comments   => '',
         created_on => $mtime,
         updated_on => $mtime,
-        version => 0,
+        version    => 0,
     };
 }
 
-get '/projects/foo/wiki/index', [ format => ['json']] => sub {
+get '/projects/foo/wiki/index', [ format => ['json'] ] => sub {
     my $c = shift;
     $c->render( json => { wiki_pages => [ values %pages ] } );
 };
 
-get '/projects/foo/wiki/:version/:title', [ format => ['json']] => sub {
-    my $c = shift;
+get '/projects/foo/wiki/:version/:title', [ format => ['json'] ] => sub {
+    my $c    = shift;
     my $page = $pages{ $c->stash('title') };
-    if ($page ) {
+    if ($page) {
         $c->render( json => { wiki_page => $page } );
     }
     else {
@@ -43,10 +43,10 @@ get '/projects/foo/wiki/:version/:title', [ format => ['json']] => sub {
     }
 };
 
-get '/projects/foo/wiki/:title', [ format => ['json']] => sub {
-    my $c = shift;
+get '/projects/foo/wiki/:title', [ format => ['json'] ] => sub {
+    my $c    = shift;
     my $page = $pages{ $c->stash('title') };
-    if ($page ) {
+    if ($page) {
         $c->render( json => { wiki_page => $page } );
     }
     else {
@@ -54,46 +54,63 @@ get '/projects/foo/wiki/:title', [ format => ['json']] => sub {
     }
 };
 
-put '/projects/foo/wiki/:title', [ format => ['json']]  => sub {
-    my $c = shift;
+put '/projects/foo/wiki/:title', [ format => ['json'] ] => sub {
+    my $c     = shift;
     my $title = $c->stash('title');
-    my $text = $c->req->json->{wiki_page}->{text};
+    my $text  = $c->req->json->{wiki_page}->{text};
 
     my $time = Mojo::Date->new->to_datetime;
-    if ( my $page = $pages{ $title } ) {
-        $page->{text} = $text,
-        $page->{updated_on} = $time;
+    if ( my $page = $pages{$title} ) {
+        $page->{text} = $text, $page->{updated_on} = $time;
         use Data::Dumper;
         warn Dumper $page;
 
         $c->render( status => 204, text => '' );
     }
     else {
-        my ($uid,$name) = (getpwuid($<))[2,6];
-        $pages{ $title } = {
-            title => $title,
-            text  => $text,
-            author => { id => $uid, name => $name },
-            comments => '',
+        my ( $uid, $name ) = ( getpwuid($<) )[ 2, 6 ];
+        $pages{$title} = {
+            title      => $title,
+            text       => $text,
+            author     => { id => $uid, name => $name },
+            comments   => '',
             created_on => $time,
             updated_on => $time,
-            version => 0,
+            version    => 0,
         };
         $c->render( status => 201, text => '' );
     }
 };
 
-del '/projects/foo/wiki/#title', [ format => ['json' ]] => sub {
+del '/projects/foo/wiki/#title', [ format => ['json'] ] => sub {
     my $c = shift;
     delete $pages{ $c->stash('title') };
     $c->render( status => 204, text => '' );
 };
 
-get '/projects/foo/search', [ format => ['json' ]] => sub {
-    my $c = shift;
-    my $q = $c->param('q');
-    my @result = grep { $_->{text} =~ $q } values %pages;
-    $c->render( json => { wiki_pages => \@result } );
+get '/projects/foo/search', [ format => ['json'] ] => sub {
+    my $c      = shift;
+    my $q      = $c->param('q');
+    my $offset = $c->param('offset') || 0;
+    my $limit  = $c->param('limit')  || 25;
+
+    my @results = map {
+        $_->{description} = delete $_->{text};
+        $_
+    } grep { $_->{text} =~ /\Q$q/ } values %pages;
+
+    $c->render(
+        json => {
+            offset      => $offset,
+            limit       => $limit,
+            total_count => scalar @results,
+            results     => [
+                  @results <= $limit
+                ? @results
+                : @results[ $offset .. $offset + $limit - 1 ]
+            ]
+        }
+    );
 };
 
 app->start;

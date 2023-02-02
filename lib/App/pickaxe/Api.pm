@@ -11,7 +11,7 @@ sub get ( $self, $path, %parameters ) {
         $url->query->merge(%parameters);
     }
     my $res = $self->ua->get( $url => { 'Content-Type' => 'application/json' } )
-          ->result;
+      ->result;
     if ( $res->code == 401 ) {
         die "Authentication failed.\n";
     }
@@ -52,8 +52,8 @@ sub delete ( $self, $title ) {
 sub pages ($self) {
     my $res = $self->get("wiki/index.json");
     if ( $res->is_success ) {
-        return
-          [ map { App::pickaxe::Api::Page->new($_)->api($self) } @{ $res->json->{wiki_pages} } ];
+        return [ map { App::pickaxe::Api::Page->new($_)->api($self) }
+              @{ $res->json->{wiki_pages} } ];
     }
     return [];
 }
@@ -61,7 +61,8 @@ sub pages ($self) {
 sub page ( $self, $title ) {
     my $res = $self->get("wiki/$title.json");
     if ( $res->is_success ) {
-        return App::pickaxe::Api::Page->new($res->json->{wiki_page})->api($self);
+        return App::pickaxe::Api::Page->new( $res->json->{wiki_page} )
+          ->api($self);
     }
     return;
 }
@@ -111,7 +112,7 @@ sub projects ($self) {
 
 sub search ( $self, $query ) {
     my %pages = map { $_->{title} => $_ } @{ $self->pages };
-    my $res = $self->get(
+    my $res   = $self->get(
         "search.json",
         q          => $query,
         wiki_pages => 1,
@@ -141,12 +142,12 @@ sub search ( $self, $query ) {
     }
 
     for my $page (@matching_pages) {
-      $page->{title} =~ s/^Wiki: //;
-      $page = { %$page, %{ $pages{ $page->{title} }}};
-      $page->{text} = delete $page->{description};
-      $page->{text} =~ s/\r\n/\n/gs;
-      delete $page->{datetime};
-      $page = App::pickaxe::Api::Page->new($page)->api($self);
+        $page->{title} =~ s/^Wiki: //;
+        $page->{text} = delete $page->{description};
+        $page = { %$page, %{ $pages{ $page->{title} } } };
+        $page->{text} =~ s/\r\n/\n/gs;
+        delete $page->{datetime};
+        $page = App::pickaxe::Api::Page->new($page)->api($self);
     }
     return \@matching_pages;
 }
@@ -165,10 +166,10 @@ has 'comments';
 
 has 'api', undef, weak => 1;
 
-has 'text' => sub ($self ) {
+has 'text' => sub ($self) {
     my $version = $self->version;
-    my $title = $self->title;
-    my $res = $self->api->get("wiki/$title/$version.json");
+    my $title   = $self->title;
+    my $res     = $self->api->get("wiki/$title/$version.json");
     if ( $res->is_success ) {
         my $text = $res->json->{wiki_page}->{text};
         $text =~ s/\r\n/\n/gs;
@@ -177,10 +178,10 @@ has 'text' => sub ($self ) {
     return '';
 };
 
-sub url ( $self ) {
-    my $url = $self->api->base_url->clone->path("wiki/" . $self->title);
+sub url ($self) {
+    my $url = $self->api->base_url->clone->path( "wiki/" . $self->title );
     $url->query( key => undef );
     return $url->to_string;
-};
+}
 
 1;
