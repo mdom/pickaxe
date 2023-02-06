@@ -65,11 +65,6 @@ sub add_page ( $self, $key ) {
     }
 }
 
-sub force_render ( $self, @ ) {
-    clearok( stdscr, 1 );
-    $self->render;
-}
-
 sub save_page ( $self, $title, $new_text, $version = undef ) {
     while (1) {
         if ( $self->api->save( $title, $new_text, $version ) ) {
