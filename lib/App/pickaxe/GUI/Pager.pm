@@ -2,8 +2,6 @@ package App::pickaxe::GUI::Pager;
 use Mojo::Base -signatures, App::pickaxe::GUI::Scrollable;
 use Curses;
 
-has find_active    => 0;
-
 sub set_text ( $self, $text ) {
     my @lines = split( "\n", $text );
     $self->set_lines( @lines );
