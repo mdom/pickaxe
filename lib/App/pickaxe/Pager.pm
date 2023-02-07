@@ -13,7 +13,7 @@ has 'index';
 
 sub statusbar ($self) {
     my $base  = $self->api->base_url->clone->query( key => undef );
-    my $page = $self->index->current_page->title;
+    my $title = $self->index->current_page->title;
     my $percent;
     if ( $self->nlines == 0 ) {
         $percent = '100';

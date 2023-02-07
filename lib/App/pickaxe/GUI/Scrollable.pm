@@ -14,6 +14,8 @@ has ncolumns       => 0;
 has current_line   => 0;
 has current_column => 0;
 
+has find_active => 0;
+
 has maxlines => sub { $LINES - 3 };
 
 has moniker => sub ($self) {
@@ -122,6 +124,9 @@ sub find_next ( $self, $key, $direction = 1 ) {
     }
 
     my $shifter = $direction == -1 ? \&cycle_shift_reverse : \&cycle_shift;
+
+    ## TODO this loops endlessly if all matches are on the same line
+    ##      should traverse matches only once
     while ( $self->matches->[0]->[0] == $self->current_line ) {
         $shifter->( $self->matches );
     }
