@@ -3,6 +3,7 @@ use Mojo::Base -base, -signatures;
 use Curses;
 use App::pickaxe::Keys 'getkey';
 use App::pickaxe::Getline 'getline';
+use Mojo::Util 'decamelize';
 
 has 'lines' => sub { [] };
 has 'message' => '';
@@ -15,8 +16,14 @@ has current_column => 0;
 
 has maxlines => sub { $LINES - 3 };
 
+has moniker => sub ($self) {
+    my $map = lc(ref($self));
+    $map =~ s/.*:://;
+    decamelize($map)
+};
+
 sub statusbar ($self) {
-    return ('foo', 'bar' );
+    return ('', '' );
 }
 
 sub helpbar ($self) {
@@ -24,7 +31,7 @@ sub helpbar ($self) {
 }
 
 sub first_line_on_page ($self) {
-    return int( $self->current_line / $self->maxlines ) * $self->maxlines;
+    return $self->current_line;
 }
 
 sub set_lines ($self, @lines) {
@@ -75,7 +82,7 @@ sub render ( $self, @ ) {
 
     display_msg( $self->message );
 
-    my $first_line = $self->current_line;
+    my $first_line = $self->first_line_on_page;
     my $last_line  = $first_line + $self->maxlines - 1;
 
     if ( $last_line > $self->nlines - 1 ) {
@@ -239,9 +246,7 @@ sub run ($self, $keybindings) {
         next if !$key;
         $self->message('');
 
-        my $map = lc(ref($self));
-        $map =~ s/.*:://;
-        my $funcname = $keybindings->{$map}->{$key};
+        my $funcname = $keybindings->{$self->moniker}->{$key};
 
         if ( !$funcname ) {
             $self->message('Key is not bound.');
@@ -256,6 +261,17 @@ sub run ($self, $keybindings) {
         refresh;
     }
 }
+
+sub jump ( $self, $key ) {
+    return if $self->pages->empty;
+    my $number = getline( "Jump to line: ", { buffer => $key } );
+    if ( !$number || $number =~ /\D/ ) {
+        display_msg("Argument must be a number.");
+        return;
+    }
+    $self->goto_line( $number - 1 );
+}
+
 
 sub force_render ( $self, @ ) {
     clearok( stdscr, 1 );

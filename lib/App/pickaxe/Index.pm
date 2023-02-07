@@ -1,31 +1,28 @@
 package App::pickaxe::Index;
-use Mojo::Base -signatures, 'App::pickaxe::Controller';
+use Mojo::Base -signatures, 'App::pickaxe::GUI::Select', 'App::pickaxe::Controller';
 use Curses;
 use App::pickaxe::Pager;
-use App::pickaxe::Pages;
 use App::pickaxe::Getline 'getline';
-use App::pickaxe::DisplayMsg 'display_msg';
 use App::pickaxe::SelectOption 'select_option', 'askyesno';
 use POSIX 'strftime';
 
 has 'config';
-has pages => sub { App::pickaxe::Pages->new; };
+has 'keybindings';
+has pages => sub { [] };
 
-has pager => sub ($self) {
-    App::pickaxe::Pager->new( pages => $self->pages, config => $self->config );
-};
-
-has help_summary =>
+has helpbar =>
   "q:Quit a:Add e:Edit s:Search /:find b:Browse o:Order D:delete ?:help";
 
-has 'order' => 'reverse_updated_on';
-
-has 'needle';
-
-sub status ($self) {
+sub statusbar ($self) {
     my $base = $self->config->{base_url}->clone->query( key => undef );
     return "pickaxe: $base";
 }
+
+sub current_page ( $self ) {
+    $self->pages->[ $self->current_line ];
+}
+
+has 'order' => 'reverse_updated_on';
 
 sub format_time ( $self, $time ) {
     my $strftime_fmt = $self->config->index_time_format;
@@ -81,90 +78,9 @@ sub compile_index_format ($self) {
     return $fmt, @args;
 }
 
-sub render ( $self, @ ) {
-    $self->next::method;
-    return if $self->pages->empty;
-
-    my @pages = $self->pages->each;
-
-    my $offset = $self->first_item_on_page;
-
-
-    my $x = 1;
-    my ( $fmt, @args ) = $self->compile_index_format;
-
-    my $last_index = $offset + $self->maxlines - 1;
-    if ( $last_index > @pages - 1 ) {
-        $last_index = @pages - 1;
-    }
-
-    for my $page ( @pages[ $offset .. $last_index ] ) {
-        $page->{index} = $offset + $x;
-
-        my $line = eval {
-            sprintf( $fmt, map { $_->($page) } @args );
-        };
-        if ($@) {
-            $self->dump($page);
-        }
-        $line = substr( $line, 0, $COLS - 1 );
-        addstring( $x, 0, $line );
-        $x++;
-    }
-    chgat( $self->pages->pos - $offset + 1, 0, -1, A_REVERSE, 0, 0 );
-}
-
-sub delete_page ( $self, $key ) {
-    return if $self->pages->empty;
-    $self->next::method($key);
-}
-
 sub update_pages ( $self, $key ) {
     $self->set_pages( $self->api->pages );
     display_msg("Updated.");
-}
-
-sub find_next ( $self, $key, $direction = 1 ) {
-    return if $self->pages->empty;
-    if ( !$self->needle ) {
-        my $prompt = 'Find title' . ( $direction == -1 ? ' reverse' : '' );
-        state $history = [];
-        my $needle = getline( "$prompt: ", { history => $history } );
-        return if !$needle;
-        $self->needle( lc($needle) );
-    }
-    my $needle = $self->needle;
-    my @pages  = $self->pages->each;
-    my $pos    = $self->pages->pos;
-
-    my @indexes =
-      $direction == -1
-      ? ( reverse( 0 .. $pos - 1 ), reverse( $pos .. @pages - 1 ) )
-      : ( $pos + 1 .. @pages - 1, 0 .. $pos );
-
-    for my $i (@indexes) {
-        my $page = $pages[$i];
-        if ( index( lc( $page->{title} ), $needle ) != -1 ) {
-            $self->pages->select($i);
-            return;
-        }
-    }
-    $self->message("Not found.");
-    return;
-}
-
-sub find ( $self, $key ) {
-    $self->needle('');
-    $self->find_next($key);
-}
-
-sub find_reverse ( $self, $key ) {
-    $self->needle('');
-    $self->find_next( $key, -1 );
-}
-
-sub find_next_reverse ( $self, $key ) {
-    $self->find_next( $key, -1 );
 }
 
 my %sort_options = (
@@ -189,64 +105,9 @@ sub set_reverse_order ( $self, $key ) {
     }
 }
 
-sub jump ( $self, $key ) {
-    return if $self->pages->empty;
-    my $number = getline( "Jump to wiki page: ", { buffer => $key } );
-    if ( !$number || $number =~ /\D/ ) {
-        display_msg("Argument must be a number.");
-        return;
-    }
-    $self->pages->select( $number - 1 );
-}
-
 sub view_page ( $self, $key ) {
-    return if $self->pages->empty;
-    $self->pager->run;
+    App::pickaxe::Pager->new( config => $self->config, index => $self )->run;
     $self->render;
-}
-
-sub prev_page ( $self, $key ) {
-    return if $self->pages->empty;
-    my $pages = $self->pages;
-    my $last_item_on_page =
-      int( $pages->pos / $self->maxlines ) * $self->maxlines - 1;
-    if ( $last_item_on_page < 0 ) {
-        $self->pages->select(0);
-    }
-    else {
-        $self->pages->select($last_item_on_page);
-    }
-}
-
-sub first_item_on_page ($self) {
-    return int( $self->pages->pos / $self->maxlines ) * $self->maxlines;
-}
-
-sub next_item ( $self, $key ) {
-    $self->pages->next;
-}
-
-sub prev_item ( $self, $key ) {
-    $self->pages->prev;
-}
-
-sub first_item ( $self, $key ) {
-    $self->pages->select(0);
-}
-
-sub last_item ( $self, $key ) {
-    $self->pages->select( $self->pages->count - 1 );
-}
-
-sub next_screen ( $self, $key ) {
-    return if $self->pages->empty;
-    my $first_item_on_page = $self->first_item_on_page;
-    if ( $self->pages->count > $first_item_on_page + $self->maxlines ) {
-        $self->pages->select( $first_item_on_page + $self->maxlines );
-    }
-    else {
-        $self->pages->select( $self->pages->count - 1 );
-    }
 }
 
 sub set_pages ( $self, $pages ) {
@@ -259,7 +120,16 @@ sub set_pages ( $self, $pages ) {
         $pages = [ reverse @$pages ];
     }
 
-    $self->pages->replace($pages);
+    $self->pages($pages);
+
+    my ( $fmt, @args ) = $self->compile_index_format;
+    my @lines;
+    my $x = 1;
+    for my $page ($self->pages->@*) {
+        $page->{index} = $x++;
+        push @lines, sprintf( $fmt, map { $_->($page) } @args );
+    }
+    $self->set_lines(@lines);
 }
 
 sub search ( $self, $key ) {
@@ -316,7 +186,8 @@ sub switch_project ( $self, $key ) {
 sub run ($self) {
     $self->query_connection_details;
     $self->set_pages( $self->api->pages );
-    $self->next::method;
+
+    $self->next::method( $self->config->{keybindings} );
 }
 
 1;
