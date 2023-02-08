@@ -17,9 +17,10 @@ has api =>
   sub { App::pickaxe::Api->new( base_url => shift->config->{base_url} ) };
 
 sub open_in_browser ( $self, $key ) {
-    return if $self->pages->empty;
+    my $page = $self->current_page;
+    return if !$page;
     use IPC::Cmd;
-    IPC::Cmd::run( command => [ 'xdg-open', $self->pages->current->url ] );
+    IPC::Cmd::run( command => [ 'xdg-open', $page->url ] );
 }
 
 sub dump ( $self, $data ) {
