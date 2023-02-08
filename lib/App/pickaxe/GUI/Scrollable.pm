@@ -135,13 +135,17 @@ sub find_next ( $self, $key, $direction = 1 ) {
     }
     while ( $current->[0] == $self->current_line && $current != $start );
 
-    if ( $self->matches->[0]->[0] < $self->current_line ) {
+    $self->find_goto_line( $self->matches->[0]->[0] );
+
+    return;
+}
+
+sub find_goto_line ( $self, $line ) {
+    if ( $line < $self->current_line ) {
         $self->message('Search wrapped to top.');
     }
 
-    $self->goto_line( $self->matches->[0]->[0] );
-
-    return;
+    $self->goto_line( $line );
 }
 
 sub find_next_reverse ( $self, $key ) {
@@ -180,7 +184,7 @@ sub find ( $self, $key, $direction = 0 ) {
     if (@matches) {
         $self->matches( \@matches );
         $self->find_active(1);
-        $self->goto_line( $matches[0][0] );
+        $self->find_goto_line( $self->matches->[0]->[0] );
     }
     else {
         $self->matches( [] );
