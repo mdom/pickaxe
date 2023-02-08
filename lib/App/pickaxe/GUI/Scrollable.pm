@@ -127,9 +127,18 @@ sub find_next ( $self, $key, $direction = 1 ) {
 
     ## TODO this loops endlessly if all matches are on the same line
     ##      should traverse matches only once
-    while ( $self->matches->[0]->[0] == $self->current_line ) {
-        $shifter->( $self->matches );
+    ##      add extra array with just the line numbers
+    my $start = $self->matches->[0];
+    my $current;
+    do {
+        $current = $shifter->( $self->matches );
     }
+    while ( $current->[0] == $self->current_line && $current != $start );
+
+    if ( $self->matches->[0]->[0] < $self->current_line ) {
+        $self->message('Search wrapped to top.');
+    }
+
     $self->goto_line( $self->matches->[0]->[0] );
 
     return;
