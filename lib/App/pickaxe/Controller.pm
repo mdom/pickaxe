@@ -10,9 +10,6 @@ use App::pickaxe::Getline 'getline';
 use App::pickaxe::Keys 'getkey';
 use Algorithm::Diff;
 
-has maxlines => sub { $LINES - 3 };
-has message  => '';
-
 has api =>
   sub { App::pickaxe::Api->new( base_url => shift->config->{base_url} ) };
 
@@ -174,66 +171,10 @@ sub call_editor ( $self, $file ) {
     return decode( 'utf8', $file->slurp );
 }
 
-sub update_helpbar ($self) {
-    move( 0, 0 );
-    clrtoeol;
-    attron(A_REVERSE);
-    my $help = $self->help_summary;
-    $help = substr( $help, 0, $COLS - 1 );
-    addstring( $help . ( ' ' x ( $COLS - length($help) ) ) );
-    attroff(A_REVERSE);
-}
-
-sub update_statusbar ($self) {
-    move( $LINES - 2, 0 );
-    clrtoeol;
-    attron(A_REVERSE);
-    my ( $left, $right ) = $self->status;
-    $right //= '';
-    $left  //= '';
-    $left  = substr( $left,  0, $COLS - 1 );
-    $right = substr( $right, 0, $COLS - 1 );
-    addstring( $left . ( ' ' x ( $COLS - length($left) ) ) );
-    addstring( $LINES - 2, $COLS - 1 - length($right), $right );
-    attroff(A_REVERSE);
-}
-
 sub display_help ( $self, $key ) {
     endwin;
     system( 'perldoc', $0 );
     refresh;
-}
-
-sub render ($self) {
-    erase;
-    $self->update_statusbar;
-    $self->update_helpbar;
-    display_msg( $self->message );
-}
-
-sub run ($self) {
-    $self->render;
-    while (1) {
-        my $key = getkey;
-        next if !$key;
-        $self->message('');
-
-        my $map = lc(ref($self));
-        $map =~ s/.*:://;
-        my $funcname = $self->config->keybindings->{$map}->{$key};
-
-        if ( !$funcname ) {
-            $self->message('Key is not bound.');
-        }
-        elsif ( $funcname eq 'quit' ) {
-            last;
-        }
-        else {
-            $self->$funcname($key);
-        }
-        $self->render;
-        refresh;
-    }
 }
 
 sub delete_page ( $self, $key ) {
