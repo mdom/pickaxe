@@ -1,9 +1,16 @@
 package App::pickaxe::Index;
-use Mojo::Base -signatures, 'App::pickaxe::GUI::Select', 'App::pickaxe::Controller';
-use Curses;
-use App::pickaxe::Pager;
+use Mojo::Base -signatures, 'App::pickaxe::GUI::Select';
+
+use App::pickaxe::Api;
 use App::pickaxe::Getline 'getline';
+use App::pickaxe::Keys 'getkey';
+use App::pickaxe::Pager;
 use App::pickaxe::SelectOption 'select_option', 'askyesno';
+
+use Algorithm::Diff;
+use Curses;
+use Mojo::File 'tempfile';
+use Mojo::Util 'decode', 'encode';
 use POSIX 'strftime';
 
 has 'config';
@@ -13,6 +20,11 @@ has pages => sub { [] };
 has helpbar =>
   "q:Quit a:Add e:Edit s:Search /:find b:Browse o:Order D:delete ?:help";
 
+has 'order' => 'reverse_updated_on';
+
+has api =>
+  sub { App::pickaxe::Api->new( base_url => shift->config->{base_url} ) };
+
 sub statusbar ($self) {
     my $base = $self->config->{base_url}->clone->query( key => undef );
     return "pickaxe: $base";
@@ -21,8 +33,6 @@ sub statusbar ($self) {
 sub current_page ( $self ) {
     $self->pages->[ $self->current_line ];
 }
-
-has 'order' => 'reverse_updated_on';
 
 sub format_time ( $self, $time ) {
     my $strftime_fmt = $self->config->index_time_format;
@@ -34,6 +44,210 @@ sub format_time ( $self, $time ) {
     $mon  -= 1;
     $year -= 1900;
     strftime( $strftime_fmt, $sec, $min, $hour, $mday, $mon, $year );
+}
+
+sub open_in_browser ( $self, $key ) {
+    my $page = $self->current_page;
+    return if !$page;
+    use IPC::Cmd;
+    IPC::Cmd::run( command => [ 'xdg-open', $page->url ] );
+}
+
+sub yank_url ( $self, @ ) {
+    my $url = $self->pages->current->url;
+    open( my $xclip, '|-', @{ $self->config->yank_cmd } )
+      or $self->display_msg("Can't yank url: $!");
+    print $xclip $url;
+    close $xclip;
+    $self->display_msg("Copied url to clipboard.");
+}
+
+sub add_page ( $self, $key ) {
+    state $history = [];
+    my $title = getline( "Page name: ", { history => $history } );
+    if ( !$title ) {
+        $self->display_msg("Aborted.");
+        return;
+    }
+    if ( $self->api->page($title) ) {
+        $self->display_msg("Title has already been taken.");
+        return;
+    }
+    my $new_text = $self->call_editor(tempfile);
+
+    if ($new_text) {
+        if ( askyesno("Save page $title?") ) {
+            $self->api->save( $title, $new_text );
+            $self->update_pages;
+            $self->display_msg('Saved.');
+        }
+        else {
+            $self->display_msg('Not saved.');
+        }
+    }
+    else {
+        $self->display_msg('Discard unmodified page.');
+    }
+}
+
+sub save_page ( $self, $title, $new_text, $version = undef ) {
+    while (1) {
+        if ( $self->api->save( $title, $new_text, $version ) ) {
+            $self->display_msg('Saved.');
+        }
+        else {
+            my $option =
+              select_option( 'Conflict detected', qw(Edit Abort Overwrite) );
+            if ( !defined $option or $option eq 'abort' ) {
+                $self->display_msg('Not saved.');
+            }
+            elsif ( $option eq 'edit' ) {
+                ( $new_text, $version ) =
+                  $self->handle_conflict( $title, $new_text );
+                if ( defined $new_text ) {
+                    next;
+                }
+                $self->display_msg('Not saved.');
+            }
+            elsif ( $option eq 'overwrite' ) {
+                $self->api->save( $title, $new_text );
+                $self->display_msg('Saved.');
+            }
+        }
+        last;
+    }
+}
+
+sub update_current_page ($self) {
+    $self->pages->set( $self->api->page( $self->pages->current->{title} ) );
+}
+
+sub no_pages ($self) {
+    return !@{$self->pages};
+}
+
+sub edit_page ( $self, $key ) {
+    return if $self->no_pages;
+    $self->update_current_page;
+    my $title   = $self->pages->current->{title};
+    my $version = $self->pages->current->{version};
+    my $text    = $self->pages->current->{text};
+
+    $text =~ s/\r//g;
+    my $tempfile = tempfile;
+    $tempfile->spurt( encode( 'utf8', $text ) );
+
+    my $new_text = $self->call_editor($tempfile);
+    if ( $text ne $new_text ) {
+        if ( askyesno("Save page $title?") ) {
+            $self->save_page( $title, $new_text, $version );
+        }
+        else {
+            $self->display_msg('Not saved.');
+        }
+    }
+    else {
+        $self->display_msg('Discard unmodified page.');
+    }
+    $self->update_current_page;
+}
+
+sub handle_conflict ( $self, $title, $old_text ) {
+    my $page     = $self->api->page($title);
+    my $new_text = $page->{text};
+    $new_text =~ s/\r//g;
+    my $version = $page->{version};
+
+    my @seq1 = split( /\n/, $old_text );
+    my @seq2 = split( /\n/, $new_text );
+
+    my $diff = Algorithm::Diff->new( \@seq1, \@seq2 );
+
+    my $diff_output = '';
+    while ( $diff->Next ) {
+        if ( my @context = $diff->Same ) {
+            $diff_output .= " $_\n" for @context;
+            next;
+        }
+        $diff_output .= "-$_\n" for $diff->Items(1);
+        $diff_output .= "+$_\n" for $diff->Items(2);
+    }
+
+    my $tempfile = tempfile;
+    $tempfile->spurt( encode( 'utf8', $diff_output ) );
+    my $resolved_text;
+    while (1) {
+        $resolved_text = $self->call_editor($tempfile);
+        if ( $resolved_text =~ /^(?:\+|\-)/sm ) {
+            my $option =
+              select_option( 'Unresolved conflicts', qw(Edit Abort) );
+            if ( !defined $option or $option eq 'abort' ) {
+                return;
+            }
+            elsif ( $option eq 'edit' ) {
+                next;
+            }
+        }
+        last;
+    }
+    $resolved_text =~ s/^ //smg;
+    return $resolved_text, $version;
+}
+
+sub call_editor ( $self, $file ) {
+    endwin;
+    my $editor = $ENV{VISUAL} || $ENV{EDITOR} || 'vi';
+    system( $editor, $file->to_string );
+    $self->render;
+    return decode( 'utf8', $file->slurp );
+}
+
+sub display_help ( $self, $key ) {
+    endwin;
+    system( 'perldoc', $0 );
+    refresh;
+}
+
+sub delete_page ( $self, $key ) {
+    return if $self->no_pages;
+    my $title = $self->current_page->{title};
+    if ( askyesno("Delete page $title?") ) {
+        if (my $error = $self->api->delete($title)) {
+            $self->display_msg("Error: $error");
+            return;
+        }
+        delete $self->pages->[ $self->current_line ];
+        $self->update_pages;
+        $self->display_msg("Deleted.");
+    }
+}
+
+sub query_connection_details ($self) {
+    my $apikey = $self->config->{apikey} || $ENV{REDMINE_APIKEY};
+    if ($apikey) {
+        $self->api->base_url->query( key => $apikey );
+    }
+    else {
+        my $username = $self->config->{username} || getline("Username: ");
+        if ( !$username ) {
+            die "No username was provided."
+        }
+        my $password;
+        if ( @{ $self->config->pass_cmd } ) {
+            endwin;
+            my $cmd = "@{$self->config->{pass_cmd}}";
+            $password = qx($cmd);
+            chomp($password);
+        }
+        else {
+            $password = $self->config->{password}
+              || getline( "Password: ", { password => 1 } );
+        }
+        if ( !$password ) {
+            die "No password was provided."
+        }
+        $self->api->base_url->userinfo("$username:$password");
+    }
 }
 
 sub add_attachment ( $self, $key ) {
@@ -78,11 +292,6 @@ sub compile_index_format ($self) {
     return $fmt, @args;
 }
 
-sub update_pages ( $self, $key ) {
-    $self->set_pages( $self->api->pages );
-    display_msg("Updated.");
-}
-
 my %sort_options = (
     updated => 'updated_on',
     created => 'created_on',
@@ -93,7 +302,7 @@ sub set_order ( $self, $key ) {
     my $order = select_option( 'Sort', qw(Updated Created Title) );
     if ($order) {
         $self->order( $sort_options{$order} );
-        $self->set_pages( $self->pages->array );
+        $self->update_pages;
     }
 }
 
@@ -101,7 +310,7 @@ sub set_reverse_order ( $self, $key ) {
     my $order = select_option( 'Rev-Sort', qw(Updated Created Title) );
     if ($order) {
         $self->order("reverse_$sort_options{$order}");
-        $self->set_pages( $self->pages->array );
+        $self->update_pages;
     }
 }
 
@@ -137,20 +346,20 @@ sub search ( $self, $key ) {
     my $query =
       getline( "Search for pages matching: ", { history => $history } );
     if ( $query eq 'all' ) {
-        $self->set_pages( $self->api->pages );
+        $self->update_pages;
     }
     elsif ( $query eq '' ) {
-        display_msg('To view all messages, search for "all".');
+        $self->display_msg('To view all messages, search for "all".');
     }
     else {
         my $pages = $self->api->search($query);
 
         if ( !$pages ) {
-            display_msg('No matches found.');
+            $self->display_msg('No matches found.');
             return;
         }
         $self->set_pages($pages);
-        display_msg('To view all messages, search for "all".');
+        $self->display_msg('To view all messages, search for "all".');
     }
 }
 
@@ -175,19 +384,28 @@ sub switch_project ( $self, $key ) {
     );
     return if !$project;
     if ( !exists $projects{$project} ) {
-        display_msg("$project is not a project.");
+        $self->display_msg("$project is not a project.");
         return;
     }
 
     $self->api->base_url->path("/projects/$project/");
+    $self->update_pages;
+}
+
+sub update_pages ($self) {
     $self->set_pages( $self->api->pages );
+}
+
+sub sync_pages ( $self, $key ) {
+    $self->update_pages;
+    $self->display_msg("Updated.");
 }
 
 sub run ($self) {
     $self->query_connection_details;
-    $self->set_pages( $self->api->pages );
+    $self->update_pages;
 
-    $self->next::method( $self->config->{keybindings} );
+    $self->next::method( $self->config->keybindings );
 }
 
 1;

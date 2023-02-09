@@ -1,10 +1,20 @@
 package App::pickaxe::Pager;
-use Mojo::Base -signatures, 'App::pickaxe::GUI::Pager', 'App::pickaxe::Controller';
+use Mojo::Base -signatures, 'App::pickaxe::GUI::Pager';
 use Curses;
 use App::pickaxe::Getline 'getline';
 use Mojo::Util 'decode', 'encode';
 use Text::Wrap 'wrap';
 use Mojo::Util 'html_unescape', 'tablify';
+
+my @delegate =
+  qw(api open_in_browser add_page edit_page display_help delete_page add_attachment update_pages set_order set_reverse_order view_page search switch_project);
+
+{
+    no strict 'refs';
+    for my $method (@delegate) {
+        *{$method} = sub { shift->index->$method(@_) };
+    }
+}
 
 has helpbar => "q:Quit e:Edit /:find o:Open %:Preview D:Delete ?:help";
 
@@ -25,15 +35,11 @@ sub statusbar ($self) {
 }
 
 sub next_item ( $self, $key ) {
-    $self->index->next_item( $key );
+    $self->index->next_item($key);
 }
 
 sub prev_item ( $self, $key ) {
-    $self->index->prev_item( $key );
-}
-
-sub edit_page ( $self, $key ) {
-    $self->next::method($key);
+    $self->index->prev_item($key);
 }
 
 sub render_text ( $self, $text ) {
@@ -95,19 +101,19 @@ sub render_text ( $self, $text ) {
 
 has 'old_page';
 
-sub render ( $self ) {
+sub render ($self) {
     if ( $self->old_page ne $self->index->current_page ) {
         my $page = $self->index->current_page;
-        $self->old_page($page); 
-        $self->set_lines( $self->render_text( $page->text ));
+        $self->old_page($page);
+        $self->set_lines( $self->render_text( $page->text ) );
     }
     $self->next::method;
 }
 
 sub run ($self) {
     my $page = $self->index->current_page;
-    $self->old_page($page); 
-    $self->set_lines( $self->render_text( $page->text ));
+    $self->old_page($page);
+    $self->set_lines( $self->render_text( $page->text ) );
     $self->next::method( $self->config->{keybindings} );
 }
 
