@@ -82,7 +82,7 @@ sub render ( $self, @ ) {
     $self->update_statusbar;
     $self->update_helpbar;
 
-    display_msg( $self->message );
+    $self->display_msg( $self->message );
 
     my $first_line = $self->first_line_on_page;
     my $last_line  = $first_line + $self->maxlines - 1;
@@ -284,7 +284,7 @@ sub jump ( $self, $key ) {
     return if $self->pages->empty;
     my $number = getline( "Jump to line: ", { buffer => $key } );
     if ( !$number || $number =~ /\D/ ) {
-        display_msg("Argument must be a number.");
+        $self->display_msg("Argument must be a number.");
         return;
     }
     $self->goto_line( $number - 1 );

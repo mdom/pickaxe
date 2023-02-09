@@ -5,7 +5,7 @@ use Mojo::File 'path';
 use Mojo::Util 'decode';
 use Mojo::Date;
 
-my $dir = $ENV{REDMINE_BASE_DIR};
+my $dir = $ENV{MOJO_HOME};
 
 my %pages;
 
