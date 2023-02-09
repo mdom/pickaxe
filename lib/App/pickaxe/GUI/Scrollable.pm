@@ -250,7 +250,7 @@ sub bottom ( $self, $key ) {
     $self->goto_line( $self->nlines - $self->maxlines );
 }
 
-sub display_msg ($msg) {
+sub display_msg ($self, $msg) {
     move( $LINES - 1, 0 );
     clrtoeol;
     $msg = substr($msg, 0, $COLS);
@@ -280,8 +280,12 @@ sub run ($self, $keybindings) {
     }
 }
 
+sub empty ($self) {
+    return !@{ $self->lines };
+}
+
 sub jump ( $self, $key ) {
-    return if $self->pages->empty;
+    return if $self->empty;
     my $number = getline( "Jump to line: ", { buffer => $key } );
     if ( !$number || $number =~ /\D/ ) {
         $self->display_msg("Argument must be a number.");
@@ -289,7 +293,6 @@ sub jump ( $self, $key ) {
     }
     $self->goto_line( $number - 1 );
 }
-
 
 sub force_render ( $self, @ ) {
     clearok( stdscr, 1 );
