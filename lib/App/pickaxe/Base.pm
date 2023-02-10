@@ -7,6 +7,7 @@ use Algorithm::Diff;
 use Mojo::File 'tempfile';
 use Mojo::Util 'decode', 'encode';
 use App::pickaxe::Getline 'getline';
+use App::pickaxe::SelectOption 'select_option', 'askyesno';
 
 has 'config';
 has 'pages' => sub { App::pickaxe::Pages->new  };
@@ -34,19 +35,19 @@ my %sort_options = (
     title   => 'title',
 );
 
+sub sort_pages( $self, $order) {
+    $self->pages->sort($order);
+}
+
 sub set_reverse_order ( $self, $key ) {
-    my $order = select_option( 'Rev-Sort', qw(Updated Created Title) );
-    if ($order) {
-        $self->order("reverse_$sort_options{$order}");
-        $self->update_pages;
+    if ( my $order = select_option( 'Rev-Sort', qw(Updated Created Title) )) {
+        $self->sort_pages("reverse_$sort_options{$order}");
     }
 }
 
 sub set_order ( $self, $key ) {
-    my $order = select_option( 'Sort', qw(Updated Created Title) );
-    if ($order) {
-        $self->order( $sort_options{$order} );
-        $self->update_pages;
+    if ( my $order = select_option( 'Sort', qw(Updated Created Title) )) {
+        $self->sort_pages($sort_options{$order});
     }
 }
 
@@ -102,7 +103,7 @@ sub call_editor ( $self, $file ) {
     endwin;
     my $editor = $ENV{VISUAL} || $ENV{EDITOR} || 'vi';
     system( $editor, $file->to_string );
-    # $self->render;
+    $self->render;
     return decode( 'utf8', $file->slurp );
 }
 
@@ -239,6 +240,16 @@ sub add_page ( $self, $key ) {
     else {
         $self->message('Discard unmodified page.');
     }
+}
+
+sub update_pages ($self) {
+    $self->set_pages( $self->api->pages );
+}
+
+sub set_pages ( $self, $pages ) {
+
+    $self->pages->set($pages);
+
 }
 
 1;

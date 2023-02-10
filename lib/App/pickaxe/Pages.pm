@@ -4,8 +4,38 @@ use Mojo::Base -signatures, -base;
 has index => 0;
 has array => sub { [] };
 
-sub new ($class, $array = []) {
-    bless { array => $array }, $class;
+has 'order' => 'reverse_updated_on';
+
+my %sort_options = (
+    updated => 'updated_on',
+    created => 'created_on',
+    title   => 'title',
+);
+
+sub sort ($self, $order = undef) {
+
+    my $current = $self->current;
+
+    if ( $order ) {
+        $self->order($order)
+    }
+
+    $order = $self->order =~ s/^reverse_//r;
+
+    my $pages = [ sort { $a->{$order} cmp $b->{$order} } @{$self->array} ];
+
+    if ( $self->order =~ /^reverse_/ ) {
+        $pages = [ reverse @$pages ];
+    }
+
+    $self->array($pages);
+
+    for ( my $i = 0; $i < @$pages; $i++ ) {
+        if ($current == $pages->[$i] ) {
+            $self->index( $i );
+            last;
+        }
+    }
 }
 
 sub current ($self, $page = undef) {
@@ -18,7 +48,11 @@ sub delete_current ( $self ) {
 }
 
 sub set ( $self, $pages ) {
-    $self->array($pages);
+
+    $self->array( $pages );
+
+    $self->sort();
+
     if ( $self->index >= $self->count ) {
         $self->index( $self->count - 1 );
     }
