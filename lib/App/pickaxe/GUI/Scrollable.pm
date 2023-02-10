@@ -135,14 +135,17 @@ sub find_next ( $self, $key, $direction = 1 ) {
     }
     while ( $current->[0] == $self->current_line && $current != $start );
 
-    $self->find_goto_line( $self->matches->[0]->[0] );
+    $self->find_goto_line( $self->matches->[0]->[0], $direction );
 
     return;
 }
 
-sub find_goto_line ( $self, $line ) {
-    if ( $line < $self->current_line ) {
+sub find_goto_line ( $self, $line, $direction ) {
+    if ( $line < $self->current_line && $direction == 1) {
         $self->message('Search wrapped to top.');
+    }
+    elsif ( $line > $self->current_line && $direction == -1 ) {
+        $self->message('Search wrapped to bottom.');
     }
 
     $self->goto_line( $line );
@@ -164,7 +167,7 @@ sub cycle_shift_reverse ($array) {
     return $elt;
 }
 
-sub find ( $self, $key, $direction = 0 ) {
+sub find ( $self, $key, $direction = 1 ) {
     my $prompt = 'Find string' . ( $direction == -1 ? ' reverse' : '' );
     state $history = [];
     my $needle = getline( "$prompt: ", { history => $history } );
@@ -184,7 +187,7 @@ sub find ( $self, $key, $direction = 0 ) {
     if (@matches) {
         $self->matches( \@matches );
         $self->find_active(1);
-        $self->find_goto_line( $self->matches->[0]->[0] );
+        $self->find_goto_line( $self->matches->[0]->[0], $direction );
     }
     else {
         $self->matches( [] );
