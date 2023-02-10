@@ -6,32 +6,15 @@ has array => sub { [] };
 
 has 'order' => 'reverse_updated_on';
 
-my %sort_options = (
-    updated => 'updated_on',
-    created => 'created_on',
-    title   => 'title',
-);
-
-sub sort ($self, $order = undef) {
+sub sort ($self, $order) {
 
     my $current = $self->current;
 
-    if ( $order ) {
-        $self->order($order)
-    }
+    $self->order($order);
+    $self->set($self->array);
 
-    $order = $self->order =~ s/^reverse_//r;
-
-    my $pages = [ sort { $a->{$order} cmp $b->{$order} } @{$self->array} ];
-
-    if ( $self->order =~ /^reverse_/ ) {
-        $pages = [ reverse @$pages ];
-    }
-
-    $self->array($pages);
-
-    for ( my $i = 0; $i < @$pages; $i++ ) {
-        if ($current == $pages->[$i] ) {
+    for ( my $i = 0; $i < @{$self->array}; $i++ ) {
+        if ($current == $self->array->[$i] ) {
             $self->index( $i );
             last;
         }
@@ -49,9 +32,15 @@ sub delete_current ( $self ) {
 
 sub set ( $self, $pages ) {
 
-    $self->array( $pages );
+    my $order = $self->order =~ s/^reverse_//r;
 
-    $self->sort();
+    $pages = [ sort { $a->{$order} cmp $b->{$order} } @$pages ];
+
+    if ( $self->order =~ /^reverse_/ ) {
+        $pages = [ reverse @$pages ];
+    }
+
+    $self->array( $pages );
 
     if ( $self->index >= $self->count ) {
         $self->index( $self->count - 1 );
