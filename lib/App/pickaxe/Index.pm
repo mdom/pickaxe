@@ -30,6 +30,16 @@ sub format_time ( $self, $time ) {
     strftime( $strftime_fmt, $sec, $min, $hour, $mday, $mon, $year );
 }
 
+sub find ( $self, $key, $direction = 0 ) {
+    $self->next::method($key, $direction);
+    $self->pages->index( $self->current_line );
+}
+
+sub find_next ( $self, $key, $direction = 1) {
+    $self->next::method($key, $direction);
+    $self->pages->index( $self->current_line );
+}
+
 sub update_current_page ($self) {
     $self->pages->set( $self->api->page( $self->pages->current->title ) );
 }

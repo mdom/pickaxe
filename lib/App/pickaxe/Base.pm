@@ -35,7 +35,7 @@ my %sort_options = (
     title   => 'title',
 );
 
-sub sort_pages( $self, $order) {
+sub sort_pages( $self, $order) { # hook
     $self->pages->sort($order);
 }
 
