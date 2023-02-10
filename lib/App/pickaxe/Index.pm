@@ -5,7 +5,6 @@ use App::pickaxe::Getline 'getline';
 use App::pickaxe::Keys 'getkey';
 use App::pickaxe::Pager;
 use App::pickaxe::Pages;
-use App::pickaxe::SelectOption 'select_option', 'askyesno';
 
 use Curses;
 
@@ -13,8 +12,6 @@ use POSIX 'strftime';
 
 has helpbar =>
   "q:Quit a:Add e:Edit s:Search /:find b:Browse o:Order D:delete ?:help";
-
-has 'order' => 'reverse_updated_on';
 
 sub statusbar ($self) {
     my $base = $self->config->{base_url}->clone->query( key => undef );
@@ -75,21 +72,23 @@ sub compile_index_format ($self) {
 
 sub view_page ( $self, $key ) {
     App::pickaxe::Pager->new( config => $self->config, pages => $self->pages, api => $self->api )->run;
+    ## pages could be changed, so we regenerate the index
+    $self->regenerate_index;
     $self->render;
 }
 
+sub sort_pages ( $self, $pages ) {
+    $self->next::method( $pages );
+    $self->regenerate_index;
+}
+
 sub set_pages ( $self, $pages ) {
+    $self->next::method( $pages );
+    $self->regenerate_index;
 
-    my $order = $self->order =~ s/^reverse_//r;
+}
 
-    $pages = [ sort { $a->{$order} cmp $b->{$order} } @$pages ];
-
-    if ( $self->order =~ /^reverse_/ ) {
-        $pages = [ reverse @$pages ];
-    }
-
-    $self->pages->set($pages);
-
+sub regenerate_index ( $self ) {
     my ( $fmt, @args ) = $self->compile_index_format;
     my @lines;
     my $x = 1;
@@ -151,10 +150,6 @@ sub switch_project ( $self, $key ) {
     $self->update_pages;
 }
 
-sub update_pages ($self) {
-    $self->set_pages( $self->api->pages );
-}
-
 sub sync_pages ( $self, $key ) {
     $self->update_pages;
     $self->message("Updated.");
@@ -169,16 +164,16 @@ sub prev_item ( $self, $key ) {
     $self->pages->prev;
 }
 
-sub render ( $self ) {
-    $self->current_line( $self->pages->index );
-    $self->next::method;
-}
-
 sub run ($self) {
     $self->query_connection_details;
     $self->update_pages;
 
     $self->next::method( $self->config->keybindings );
+}
+
+sub render ( $self ) {
+    $self->current_line( $self->pages->index );
+    $self->next::method;
 }
 
 1;
