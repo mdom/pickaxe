@@ -50,7 +50,7 @@ sub getline ( $prompt, $options = {} ) {
     refresh;
     while (1) {
         my $key = getkey;
-        next if !$key;
+        next if ! defined $key;
 
         my $funcname = $getline_bindings{$key} || 'self_insert';
         if ( $funcname eq 'accept_line' ) {
