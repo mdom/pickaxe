@@ -22,7 +22,7 @@ sub sort ($self, $order) {
 }
 
 sub current ($self, $page = undef) {
-    $self->pages->array->[ $self->index ] = $page if $page;
+    $self->array->[ $self->index ] = $page if $page;
     return $self->array->[ $self->index ];
 }
 
