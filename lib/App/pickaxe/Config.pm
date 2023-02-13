@@ -59,6 +59,7 @@ has keybindings => sub {
         pager => {
             e             => 'edit_page',
             a             => 'add_page',
+            b             => 'open_in_browser',
             'q'           => 'quit',
             'y'           => 'yank_url',
             '$'           => 'sync_pages',
@@ -86,6 +87,8 @@ has keybindings => sub {
             o             => 'set_order',
             O             => 'set_reverse_order',
             D             => 'delete_page',
+            '<'           => 'prev_version',
+            '>'           => 'next_version',
         }
     };
 };

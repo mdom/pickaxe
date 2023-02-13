@@ -25,8 +25,8 @@ sub next_item ( $self, $key ) {
     $self->pages->next;
 }
 
-sub empty ($self) {
-    $self->pages->empty;
+sub prev_item ( $self, $key ) {
+    $self->pages->prev;
 }
 
 my %sort_options = (
@@ -152,11 +152,11 @@ sub handle_conflict ( $self, $title, $old_text ) {
 sub edit_page ( $self, $key ) {
     return if $self->empty;
 
-    my $page = $self->api->page( $self->pages->current->{title} );
+    my $page = $self->pages->current;
 
-    my $title   = $page->{title};
-    my $version = $page->{version};
-    my $text    = $page->{text};
+    my $title   = $page->title;
+    my $version = $page->version;
+    my $text    = $page->text;
 
     $text =~ s/\r//g;
     my $tempfile = tempfile;
@@ -243,7 +243,7 @@ sub add_page ( $self, $key ) {
 }
 
 sub update_pages ($self) {
-    $self->set_pages( $self->api->pages );
+    $self->set_pages( $self->api->pages(1) );
 }
 
 sub set_pages ( $self, $pages ) {

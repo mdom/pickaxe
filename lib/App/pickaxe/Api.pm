@@ -2,8 +2,12 @@ package App::pickaxe::Api;
 use Mojo::Base -signatures, -base;
 use Mojo::UserAgent;
 
+has base_url => sub {
+    die "App::pickaxe::Api->base_url undefined.";
+};
+
 has ua => sub { Mojo::UserAgent->new };
-has 'base_url';
+has cache => sub { {} };
 
 sub get ( $self, $path, %parameters ) {
     my $url = $self->base_url->clone->path($path);
@@ -49,22 +53,28 @@ sub delete ( $self, $title ) {
     return;
 }
 
-sub pages ($self) {
-    my $res = $self->get("wiki/index.json");
-    if ( $res->is_success ) {
-        return [ map { App::pickaxe::Api::Page->new($_)->api($self) }
-              @{ $res->json->{wiki_pages} } ];
+sub pages ($self, $force_reload = 0) {
+    if ( ! $self->cache->%* or $force_reload ) {
+        my $res = $self->get("wiki/index.json");
+        for my $page ( @{ $res->json->{wiki_pages} } ) {
+            my $page = App::pickaxe::Api::Page->new($page)->api($self);
+            my $title = $page->title;
+            $self->cache->{ $title }->[ $page->version ] = $page
+        }
     }
-    return [];
+    return [map { $_->[-1] } values $self->cache->%*];
 }
 
-sub page ( $self, $title ) {
-    my $res = $self->get("wiki/$title.json");
-    if ( $res->is_success ) {
-        return App::pickaxe::Api::Page->new( $res->json->{wiki_page} )
-          ->api($self);
+sub page ( $self, $title, $version = undef ) {
+    if ( !$version || !$self->cache->{ $title }->[ $version] ) {
+        my $url = $version ? "wiki/$title/$version.json" : "wiki/$title.json";
+        my $res = $self->get($url);
+        if ( $res->is_success ) {
+            my $page = App::pickaxe::Api::Page->new( $res->json->{wiki_page} )->api($self);
+            $self->cache->{ $title }->[ $page->version ] = $page
+        }
     }
-    return;
+    return $self->cache->{ $title }->[ $version || -1];
 }
 
 sub projects ($self) {
