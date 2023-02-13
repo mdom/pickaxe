@@ -1,5 +1,5 @@
-package App::pickaxe::GUI::Select;
-use Mojo::Base -signatures, App::pickaxe::GUI::Scrollable;
+package App::pickaxe::UI::Index;
+use Mojo::Base -signatures, App::pickaxe::UI::Base;
 use Curses;
 
 sub next_item ($self,$key) {

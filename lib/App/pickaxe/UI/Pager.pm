@@ -1,5 +1,5 @@
-package App::pickaxe::GUI::Pager;
-use Mojo::Base -signatures, App::pickaxe::GUI::Scrollable;
+package App::pickaxe::UI::Pager;
+use Mojo::Base -signatures, App::pickaxe::UI::Base;
 use Curses;
 
 sub set_text ( $self, $text ) {

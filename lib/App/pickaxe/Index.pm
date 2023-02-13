@@ -1,5 +1,5 @@
 package App::pickaxe::Index;
-use Mojo::Base -signatures, 'App::pickaxe::Base', 'App::pickaxe::GUI::Select';
+use Mojo::Base -signatures, 'App::pickaxe::Base', 'App::pickaxe::UI::Index';
 
 use App::pickaxe::Getline 'getline';
 use App::pickaxe::Keys 'getkey';

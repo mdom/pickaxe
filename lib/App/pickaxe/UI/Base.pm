@@ -1,4 +1,4 @@
-package App::pickaxe::GUI::Scrollable;
+package App::pickaxe::UI::Base;
 use Mojo::Base -base, -signatures;
 use Curses;
 use App::pickaxe::Keys 'getkey';
