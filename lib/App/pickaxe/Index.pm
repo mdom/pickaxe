@@ -11,7 +11,7 @@ use Curses;
 use POSIX 'strftime';
 
 has helpbar =>
-  "q:Quit a:Add e:Edit s:Search /:find b:Browse o:Order D:delete ?:help";
+  "q:Quit a:Add e:Edit s:Search /:Find b:Browse o:Order D:Delete ?:Help";
 
 sub statusbar ($self) {
     my $base = $self->config->{base_url}->clone->query( key => undef );

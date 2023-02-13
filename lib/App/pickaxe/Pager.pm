@@ -1,7 +1,7 @@
 package App::pickaxe::Pager;
 use Mojo::Base -signatures, 'App::pickaxe::Base', 'App::pickaxe::UI::Pager';
 
-has helpbar => "q:Quit e:Edit /:find o:Open %:Preview D:Delete ?:help";
+has helpbar => "q:Quit e:Edit /:Find o:Open y:Yank D:Delete ?:Help";
 has 'old_page';
 
 sub statusbar ($self) {
