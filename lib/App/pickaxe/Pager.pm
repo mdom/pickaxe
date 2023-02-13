@@ -1,5 +1,5 @@
 package App::pickaxe::Pager;
-use Mojo::Base -signatures, 'App::pickaxe::Base', 'App::pickaxe::GUI::Pager';
+use Mojo::Base -signatures, 'App::pickaxe::Base', 'App::pickaxe::UI::Pager';
 
 has helpbar => "q:Quit e:Edit /:find o:Open %:Preview D:Delete ?:help";
 has 'old_page';
