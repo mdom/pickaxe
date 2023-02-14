@@ -10,7 +10,7 @@ use App::pickaxe::Getline 'getline';
 use App::pickaxe::SelectOption 'select_option', 'askyesno';
 
 has 'config';
-has 'pages' => sub { App::pickaxe::Pages->new  };
+has 'pages' => sub { App::pickaxe::Pages->new };
 
 has api =>
   sub { App::pickaxe::Api->new( base_url => shift->config->{base_url} ) };
@@ -35,19 +35,19 @@ my %sort_options = (
     title   => 'title',
 );
 
-sub sort_pages( $self, $order) { # hook
+sub sort_pages ( $self, $order ) {    # hook
     $self->pages->sort($order);
 }
 
 sub set_reverse_order ( $self, $key ) {
-    if ( my $order = select_option( 'Rev-Sort', qw(Updated Created Title) )) {
+    if ( my $order = select_option( 'Rev-Sort', qw(Updated Created Title) ) ) {
         $self->sort_pages("reverse_$sort_options{$order}");
     }
 }
 
 sub set_order ( $self, $key ) {
-    if ( my $order = select_option( 'Sort', qw(Updated Created Title) )) {
-        $self->sort_pages($sort_options{$order});
+    if ( my $order = select_option( 'Sort', qw(Updated Created Title) ) ) {
+        $self->sort_pages( $sort_options{$order} );
     }
 }
 
@@ -164,17 +164,18 @@ sub edit_page ( $self, $key ) {
 
     my $new_text = $self->call_editor($tempfile);
     if ( $text ne $new_text ) {
-        if ( askyesno("Save page $title?") ) {
-            $self->save_page( $title, $new_text, $version );
+        if ( askyesno("Save page $title?")
+            && $self->save_page( $title, $new_text, $version ) )
+        {
+            $self->message('Saved.');
+            $self->update_pages;
+            return;
         }
-        else {
-            $self->message('Not saved.');
-        }
+        $self->message('Not saved.');
     }
     else {
         $self->message('Discard unmodified page.');
     }
-    $self->pages->current( $self->api->page( $title ) );
 }
 
 sub yank_url ( $self, $key ) {
@@ -187,30 +188,29 @@ sub yank_url ( $self, $key ) {
 }
 
 sub save_page ( $self, $title, $new_text, $version = undef ) {
-    while (1) {
+    {
         if ( $self->api->save( $title, $new_text, $version ) ) {
-            $self->message('Saved.');
+            return 1;
         }
         else {
             my $option =
               select_option( 'Conflict detected', qw(Edit Abort Overwrite) );
             if ( !defined $option or $option eq 'abort' ) {
-                $self->message('Not saved.');
+                return 0;
             }
             elsif ( $option eq 'edit' ) {
                 ( $new_text, $version ) =
                   $self->handle_conflict( $title, $new_text );
                 if ( defined $new_text ) {
-                    next;
+                    redo;
                 }
-                $self->message('Not saved.');
+                return 0;
             }
             elsif ( $option eq 'overwrite' ) {
                 $self->api->save( $title, $new_text );
-                $self->message('Saved.');
+                return 1;
             }
         }
-        last;
     }
 }
 
@@ -243,13 +243,11 @@ sub add_page ( $self, $key ) {
 }
 
 sub update_pages ($self) {
-    $self->set_pages( $self->api->pages(1) );
+    $self->set_pages( $self->api->pages );
 }
 
 sub set_pages ( $self, $pages ) {
-
     $self->pages->set($pages);
-
 }
 
 1;
