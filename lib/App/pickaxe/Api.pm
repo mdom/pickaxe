@@ -53,14 +53,12 @@ sub delete ( $self, $title ) {
     return;
 }
 
-sub pages ($self, $force_reload = 0) {
-    if ( ! $self->cache->%* or $force_reload ) {
-        my $res = $self->get("wiki/index.json");
-        for my $page ( @{ $res->json->{wiki_pages} } ) {
-            my $page = App::pickaxe::Api::Page->new($page)->api($self);
-            my $title = $page->title;
-            $self->cache->{ $title }->[ $page->version ] = $page
-        }
+sub pages ($self) {
+    my $res = $self->get("wiki/index.json");
+    for my $page ( @{ $res->json->{wiki_pages} } ) {
+        my $page = App::pickaxe::Api::Page->new($page)->api($self);
+        my $title = $page->title;
+        $self->cache->{ $title }->[ $page->version ] = $page
     }
     return [map { $_->[-1] } values $self->cache->%*];
 }
