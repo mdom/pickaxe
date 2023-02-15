@@ -7,8 +7,10 @@ has 'version';
 
 sub statusbar ($self) {
     my $base  = $self->api->base_url->clone->query( key => undef );
-    my $title = $self->pages->current->title;
-    my $version = $self->version;
+    my $page =  $self->api->page( $self->pages->current->title, $self->version );
+    my $title = $page->title;
+    my $version = $page->version;
+    my $author = $page->author->{name};
     my $percent;
     if ( $self->nlines == 0 ) {
         $percent = '100';
@@ -16,7 +18,7 @@ sub statusbar ($self) {
     else {
         $percent = int( $self->current_line / $self->nlines * 100 );
     }
-    return "pickaxe: $base $title\@$version", sprintf( "--%3d%%", $percent );
+    return "pickaxe: $base $title rev $version by $author", sprintf( "--%3d%%", $percent );
 }
 
 sub render ($self) {
@@ -32,6 +34,18 @@ sub render ($self) {
 sub run ($self) {
     my $page = $self->pages->current;
     $self->next::method( $self->config->{keybindings} );
+}
+
+sub first_version ( $self, $key ) {
+    my $page = $self->pages->current;
+    $self->version( 1 );
+    $self->set_text( $self->api->page( $page->title, $self->version)->rendered_text );
+}
+
+sub latest_version ( $self, $key ) {
+    my $page = $self->pages->current;
+    $self->version( $page->version );
+    $self->set_text( $self->api->page( $page->title, $self->version)->rendered_text );
 }
 
 sub prev_version ( $self, $key ) {

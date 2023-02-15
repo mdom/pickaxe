@@ -109,8 +109,7 @@ sub call_editor ( $self, $file ) {
 
 sub handle_conflict ( $self, $title, $old_text ) {
     my $page     = $self->api->page($title);
-    my $new_text = $page->{text};
-    $new_text =~ s/\r//g;
+    my $new_text = $page->text;
     my $version = $page->{version};
 
     my @seq1 = split( /\n/, $old_text );
