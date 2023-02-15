@@ -89,6 +89,10 @@ has keybindings => sub {
             D             => 'delete_page',
             '<'           => 'prev_version',
             '>'           => 'next_version',
+            '['           => 'prev_version',
+            ']'           => 'next_version',
+            '{'           => 'first_version',
+            '}'           => 'latest_version',
         }
     };
 };

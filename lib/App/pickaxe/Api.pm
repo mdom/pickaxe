@@ -56,7 +56,7 @@ sub delete ( $self, $title ) {
 sub pages ($self) {
     my $res = $self->get("wiki/index.json");
     for my $page ( @{ $res->json->{wiki_pages} } ) {
-        my $page = App::pickaxe::Api::Page->new($page)->api($self);
+        my $page = App::pickaxe::Page->new($page)->api($self);
         my $title = $page->title;
         $self->cache->{ $title }->[ $page->version ] = $page
     }
@@ -68,8 +68,10 @@ sub page ( $self, $title, $version = undef ) {
         my $url = $version ? "wiki/$title/$version.json" : "wiki/$title.json";
         my $res = $self->get($url);
         if ( $res->is_success ) {
-            my $page = App::pickaxe::Api::Page->new( $res->json->{wiki_page} )->api($self);
-            $self->cache->{ $title }->[ $page->version ] = $page
+            my $page = $res->json->{wiki_page};
+            $page->{text} =~ s/\r//g;
+            $self->cache->{ $title }->[ $version ] =
+                App::pickaxe::Page->new( $page )->api($self);
         }
     }
     return $self->cache->{ $title }->[ $version || -1];
@@ -155,12 +157,12 @@ sub search ( $self, $query ) {
         $page = { %$page, %{ $pages{ $page->{title} } } };
         $page->{text} =~ s/\r\n/\n/gs;
         delete $page->{datetime};
-        $page = App::pickaxe::Api::Page->new($page)->api($self);
+        $page = App::pickaxe::Page->new($page)->api($self);
     }
     return \@matching_pages;
 }
 
-package App::pickaxe::Api::Page;
+package App::pickaxe::Page;
 use Mojo::Base -base, -signatures;
 use Text::Wrap 'wrap';
 use Mojo::Util 'html_unescape', 'tablify';
@@ -170,22 +172,40 @@ has 'version';
 has 'created_on';
 has 'updated_on';
 
-has 'parent';
-has 'author';
-has 'comments';
-
 has 'api', undef, weak => 1;
 
-has 'text' => sub ($self) {
+sub fetch_all ( $self ) {
     my $version = $self->version;
     my $title   = $self->title;
     my $res     = $self->api->get("wiki/$title/$version.json");
     if ( $res->is_success ) {
-        my $text = $res->json->{wiki_page}->{text};
-        $text =~ s/\r\n/\n/gs;
-        return $text;
+        my $page = $res->json->{wiki_page};
+        $page->{text} =~ s/\r\n/\n/gs;
+        for my $key ( keys %$page ) {
+            $self->$key( $page->{$key} );
+        }
     }
-    return '';
+    return;
+}
+
+has parent => sub ($self) {
+    $self->fetch_all;
+    return $self->parent;
+};
+
+has comments => sub ($self) {
+    $self->fetch_all;
+    return $self->comments;
+};
+
+has author => sub ($self) {
+    $self->fetch_all;
+    return $self->author;
+};
+
+has text => sub ($self) {
+    $self->fetch_all;
+    return $self->text;
 };
 
 has url => sub ($self) {
@@ -213,10 +233,13 @@ has rendered_text => sub ( $self ) {
 
     ## Collapse empty lines;
     $text =~ s/\n{3,}/\n\n\n/gs;
+    $text =~ s/\r\n/\n/g;
 
     my @table;
     my $pre_mode = 0;
     my @lines;
+    use Data::Dumper;
+    # if ($self->version == 235 ) { die Dumper [ split("\n",  $text ) ] };
     for my $line ( split( "\n", $text ) ) {
         if ( $line =~ /<pre>/ ) {
             $pre_mode = 1;
@@ -251,6 +274,7 @@ has rendered_text => sub ( $self ) {
         push @lines, split( "\n", tablify( \@table ) );
     }
     return join("\n",@lines);
+
 };
 
 1;
