@@ -110,7 +110,7 @@ sub call_editor ( $self, $file ) {
 sub handle_conflict ( $self, $title, $old_text ) {
     my $page     = $self->api->page($title);
     my $new_text = $page->text;
-    my $version = $page->{version};
+    my $version  = $page->{version};
 
     my @seq1 = split( /\n/, $old_text );
     my @seq2 = split( /\n/, $new_text );
@@ -211,6 +211,28 @@ sub save_page ( $self, $title, $new_text, $version = undef ) {
             }
         }
     }
+}
+
+sub diff_page ( $self, $key ) {
+    ## TODO diff last_version in pager!
+    my $page = $self->pages->current;
+    if ( $page->{version} == 1 ) {
+        $self->message('No previous version to diff against');
+        return;
+    }
+    my $version  = $page->version - 1;
+    my $old_text = $self->api->page( $page->title, $version )->rendered_text;
+    my $new_text = $page->rendered_text;
+
+    my $file1 = tempfile->spurt( encode( 'utf8', $old_text ) );
+    my $file2 = tempfile->spurt( encode( 'utf8', $new_text ) );
+
+    my @diff = map { decode( 'utf8', $_ ) } qx(diff -u $file1 $file2);
+
+    ## TODO Use other keybindings!
+    App::pickaxe::UI::Pager->new->set_lines( @diff[ 2 .. $#diff ] )
+      ->run( $self->config->keybindings );
+    return;
 }
 
 sub add_page ( $self, $key ) {
