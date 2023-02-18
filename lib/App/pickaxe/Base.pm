@@ -213,6 +213,14 @@ sub save_page ( $self, $title, $new_text, $version = undef ) {
     }
 }
 
+sub diff ( $old_text, $new_text ) {
+    my $file1 = tempfile->spurt( encode( 'utf8', $old_text ) );
+    my $file2 = tempfile->spurt( encode( 'utf8', $new_text ) );
+
+    my @diff = map { decode( 'utf8', $_ ) } qx(diff -u $file1 $file2);
+    return join('', @diff[ 2 .. $#diff ]);
+}
+
 sub diff_page ( $self, $key ) {
     ## TODO diff last_version in pager!
     my $page = $self->pages->current;
@@ -224,13 +232,8 @@ sub diff_page ( $self, $key ) {
     my $old_text = $self->api->page( $page->title, $version )->rendered_text;
     my $new_text = $page->rendered_text;
 
-    my $file1 = tempfile->spurt( encode( 'utf8', $old_text ) );
-    my $file2 = tempfile->spurt( encode( 'utf8', $new_text ) );
-
-    my @diff = map { decode( 'utf8', $_ ) } qx(diff -u $file1 $file2);
-
     ## TODO Use other keybindings!
-    App::pickaxe::UI::Pager->new->set_lines( @diff[ 2 .. $#diff ] )
+    App::pickaxe::UI::Pager->new->set_text( diff( $old_text, $new_text) )
       ->run( $self->config->keybindings );
     return;
 }
