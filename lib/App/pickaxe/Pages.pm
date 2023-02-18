@@ -7,18 +7,19 @@ has array => sub { [] };
 has 'order' => 'reverse_updated_on';
 
 sub sort ($self, $order) {
-
-    my $current = $self->current;
-
     $self->order($order);
     $self->set($self->array);
+}
 
+sub switch_to( $self, $elt ) {
+    return if !$elt;
     for ( my $i = 0; $i < @{$self->array}; $i++ ) {
-        if ($current == $self->array->[$i] ) {
+        if ($elt->{title} eq $self->array->[$i]->{title} ) {
             $self->index( $i );
-            last;
+            return;
         }
     }
+    return;
 }
 
 sub current ($self, $page = undef) {
@@ -32,6 +33,8 @@ sub delete_current ( $self ) {
 
 sub set ( $self, $pages ) {
 
+    my $current = $self->current;
+
     my $order = $self->order =~ s/^reverse_//r;
 
     $pages = [ sort { $a->{$order} cmp $b->{$order} } @$pages ];
@@ -42,6 +45,10 @@ sub set ( $self, $pages ) {
 
     $self->array( $pages );
 
+    ## Always try to preserve the current page the user selected ...
+    $self->switch_to($current);
+
+    ## .. if that's not possible select the last one
     if ( $self->index >= $self->count ) {
         $self->index( $self->count - 1 );
     }
