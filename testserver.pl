@@ -33,7 +33,7 @@ get '/projects/foo/wiki/index', [ format => ['json'] ] => sub {
     $c->render( json => { wiki_pages => [ map { $_->[-1] } values %pages ] } );
 };
 
-get '/projects/foo/wiki/:version/:title', [ format => ['json'] ] => sub {
+get '/projects/foo/wiki/:title/:version', [ format => ['json'] ] => sub {
     my $c    = shift;
     my $page = $pages{ $c->stash('title') };
     if ($page) {
