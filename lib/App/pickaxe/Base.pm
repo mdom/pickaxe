@@ -107,45 +107,86 @@ sub call_editor ( $self, $file ) {
     return decode( 'utf8', $file->slurp );
 }
 
+sub parse_hunks ($patch) {
+    my @hunks;
+    for my $line ( split( "\n", $patch ) ) {
+        if ( $line =~ /^\@\@ \s* -(\d+),(\d+) \s* \+(\d+),(\d+) \s* \@\@/x ) {
+            push @hunks,
+              {
+                orig_offset => $1,
+                orig_count  => $2,
+                new_offset  => $3,
+                new_count   => $4,
+              };
+            next;
+        }
+        next if !@hunks;
+        push @{ $hunks[-1]->{lines} }, $line;
+    }
+    return @hunks;
+}
+
+sub rediff ($patch) {
+    my $delta = 0;
+    my @new_patch;
+    for my $hunk ( parse_hunks($patch) ) {
+        my $count = 0;
+        for my $line ( @{ $hunk->{lines} } ) {
+            if ( $line =~ /^[+ ]/ ) {
+                $count++;
+            }
+        }
+        my ( $orig_offset, $orig_count, $new_offset ) =
+          @{$hunk}{qw(orig_offset orig_count new_offset)};
+        $new_offset += $delta;
+
+        push @new_patch, "@@ -$orig_offset,$orig_count +$new_offset,$count @@";
+        push @new_patch, @{ $hunk->{lines} };
+        $delta += $count - $hunk->{new_count};
+    }
+    return join( "\n", @new_patch ) . "\n";
+}
+
+sub apply_patch ( $patch_file, $resolved_file, $input_file ) {
+    system( 'patch', '-p0', '-i', $patch_file, '-o', $resolved_file,
+        $input_file ) == 0;
+}
+
+sub edit_patch ( $self, $old_text, $new_text ) {
+    my $patch = diff( $old_text, $new_text );
+    my $patch_file  = tempfile->spurt( encode( 'utf8', $patch ) );
+    $patch_file->spurt( encode('utf8', rediff( $self->call_editor($patch_file) )));
+
+    my $resolved_file = tempfile;
+    my $input_file    = tempfile->spurt( encode( 'utf8', $old_text ) );
+
+    if ( apply_patch( $patch_file, $resolved_file, $input_file ) ) {
+        return decode( 'utf8', $resolved_file->slurp );
+    }
+    return;
+}
+
 sub handle_conflict ( $self, $title, $old_text ) {
     my $page     = $self->api->page($title);
     my $new_text = $page->text;
     my $version  = $page->{version};
 
-    my @seq1 = split( /\n/, $old_text );
-    my @seq2 = split( /\n/, $new_text );
-
-    my $diff = Algorithm::Diff->new( \@seq1, \@seq2 );
-
-    my $diff_output = '';
-    while ( $diff->Next ) {
-        if ( my @context = $diff->Same ) {
-            $diff_output .= " $_\n" for @context;
-            next;
-        }
-        $diff_output .= "-$_\n" for $diff->Items(1);
-        $diff_output .= "+$_\n" for $diff->Items(2);
-    }
-
-    my $tempfile = tempfile;
-    $tempfile->spurt( encode( 'utf8', $diff_output ) );
-    my $resolved_text;
-    while (1) {
-        $resolved_text = $self->call_editor($tempfile);
-        if ( $resolved_text =~ /^(?:\+|\-)/sm ) {
-            my $option =
-              select_option( 'Unresolved conflicts', qw(Edit Abort) );
-            if ( !defined $option or $option eq 'abort' ) {
-                return;
+    my $resolved;
+    {
+        $resolved = $self->edit_patch( $old_text, $new_text );
+        if ( !$resolved ) {
+            my $option = select_option( 'Patch does no apply cleanly',
+                qw(Edit Abort Overwrite) );
+            if ( $option eq 'edit' ) {
+                redo;
             }
-            elsif ( $option eq 'edit' ) {
-                next;
+            if ( $option eq 'overwrite' ) {
+                return $old_text, $version;
             }
+            return;
         }
-        last;
     }
-    $resolved_text =~ s/^ //smg;
-    return $resolved_text, $version;
+    return $resolved, $version;
 }
 
 sub edit_page ( $self, $key ) {
@@ -218,7 +259,7 @@ sub diff ( $old_text, $new_text ) {
     my $file2 = tempfile->spurt( encode( 'utf8', $new_text ) );
 
     my @diff = map { decode( 'utf8', $_ ) } qx(diff -u $file1 $file2);
-    return join('', @diff[ 2 .. $#diff ]);
+    return join( '', @diff[ 2 .. $#diff ] );
 }
 
 sub diff_page ( $self, $key ) {
@@ -233,7 +274,7 @@ sub diff_page ( $self, $key ) {
     my $new_text = $page->rendered_text;
 
     ## TODO Use other keybindings!
-    App::pickaxe::UI::Pager->new->set_text( diff( $old_text, $new_text) )
+    App::pickaxe::UI::Pager->new->set_text( diff( $old_text, $new_text ) )
       ->run( $self->config->keybindings );
     return;
 }
