@@ -70,7 +70,7 @@ sub page ( $self, $title, $version = undef ) {
         if ( $res->is_success ) {
             my $page = $res->json->{wiki_page};
             $page->{text} =~ s/\r//g;
-            $self->cache->{ $title }->[ $version ] =
+            $self->cache->{ $title }->[ $page->{version} ] =
                 App::pickaxe::Page->new( $page )->api($self);
         }
     }
