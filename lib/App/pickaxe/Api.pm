@@ -64,7 +64,7 @@ sub pages ($self) {
 }
 
 sub page ( $self, $title, $version = undef ) {
-    if ( !$version || !$self->cache->{ $title }->[ $version] ) {
+    if ( !$version || !$self->cache->{ $title }->[$version] ) {
         my $url = $version ? "wiki/$title/$version.json" : "wiki/$title.json";
         my $res = $self->get($url);
         if ( $res->is_success ) {
