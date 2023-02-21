@@ -3,7 +3,7 @@ use Mojo::Base -signatures, -base;
 use App::pickaxe::Api;
 use Curses;
 
-use Mojo::File 'tempfile';
+use Mojo::File 'tempfile', 'tempdir';
 use Mojo::Util 'decode', 'encode';
 use App::pickaxe::Getline 'getline';
 use App::pickaxe::SelectOption 'select_option', 'askyesno';
@@ -152,12 +152,16 @@ sub apply_patch ( $patch_file, $resolved_file, $input_file ) {
 }
 
 sub edit_patch ( $self, $old_text, $new_text ) {
+    ## We need a tempdir here as patch(1) creates files that wouldn't be
+    ## cleaned up otherwise
+    my $dir = tempdir;
+
     my $patch = diff( $old_text, $new_text );
-    my $patch_file  = tempfile->spurt( encode( 'utf8', $patch ) );
+    my $patch_file  = $dir->child('patch')->spurt( encode( 'utf8', $patch ) );
     $patch_file->spurt( encode('utf8', rediff( $self->call_editor($patch_file) )));
 
-    my $resolved_file = tempfile;
-    my $input_file    = tempfile->spurt( encode( 'utf8', $old_text ) );
+    my $resolved_file = $dir->child('resolved');
+    my $input_file    = $dir->child('input')->spurt( encode( 'utf8', $old_text ) );
 
     if ( apply_patch( $patch_file, $resolved_file, $input_file ) ) {
         return decode( 'utf8', $resolved_file->slurp );
