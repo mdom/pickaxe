@@ -260,14 +260,17 @@ sub display_msg ($self, $msg) {
     addstring($msg);
 }
 
-sub run ($self, $keybindings) {
+sub run ( $self, $keybindings ) {
+    $keybindings =
+      { %{ $self->keybindings }, %{ $keybindings->{ $self->moniker } } };
+
     $self->render;
     while (1) {
         my $key = getkey;
         next if !$key;
         $self->message('');
 
-        my $funcname = $keybindings->{$self->moniker}->{$key};
+        my $funcname = $keybindings->{$key};
 
         if ( !$funcname ) {
             $self->message('Key is not bound.');
