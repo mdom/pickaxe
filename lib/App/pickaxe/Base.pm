@@ -103,7 +103,7 @@ sub delete_page ( $self, $key ) {
     }
 }
 
-sub display_help ( $self, $key ) {
+sub display_manpage ( $self, $key ) {
     endwin;
     system( 'perldoc', $0 );
     refresh;
