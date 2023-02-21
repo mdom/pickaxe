@@ -1,7 +1,7 @@
 package App::pickaxe::AttachmentMenu;
 use Mojo::Base 'App::pickaxe::UI::Index', -signatures;
 use Mojo::File 'tempfile';
-use Curses;
+use Curses 'refresh';
 use Mojo::URL;
 use App::pickaxe::Getline 'getline';
 
