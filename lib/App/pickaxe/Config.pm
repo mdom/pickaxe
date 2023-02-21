@@ -13,6 +13,16 @@ has pass_cmd    => sub { [] };
 has yank_cmd    => sub { ['xclip'] };
 has keybindings => sub {
     return {
+        attachmentmenu => {
+            '<End>'    => 'last_item',
+            '<Home>'   => 'first_item',
+            '<Down>'   => 'next_item',
+            '<Up>'     => 'prev_item',
+            j          => 'next_item',
+            k          => 'prev_item',
+            q          => 'quit',
+            '<Return>' => 'view_attachment',
+        },
         index => {
             '<End>'      => 'last_item',
             '<Home>'     => 'first_item',
@@ -56,9 +66,11 @@ has keybindings => sub {
             0            => 'jump',
             '^L'         => 'force_render',
             'y'          => 'yank_url',
+            'v'          => 'view_attachments',
         },
         pager => {
             e             => 'edit_page',
+            'v'           => 'view_attachments',
             a             => 'add_page',
             d             => 'diff_page',
             b             => 'open_in_browser',

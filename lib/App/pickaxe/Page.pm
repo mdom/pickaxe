@@ -13,19 +13,24 @@ has 'api';
 has extended => sub ($self) {
     my $version = $self->version;
     my $title   = $self->title;
-    my $res     = $self->api->get("wiki/$title/$version.json");
+    my $res =
+      $self->api->get( "wiki/$title/$version.json", include => 'attachments' );
     if ( $res->is_success ) {
         my $page = $res->json->{wiki_page};
         $page->{text} =~ s/\r\n/\n/gs;
-        return App::pickaxe::Page::Extended->new( $page ); 
+        $page->{attachments} =
+          [ map { App::pickaxe::Page::Attachment->new($_) }
+              @{ $page->{attachments} } ];
+        return App::pickaxe::Page::Extended->new($page);
     }
     return App::pickaxe::Page::Extended->new;
 };
 
-has parent   => sub { shift->extended->parent };
-has comments => sub { shift->extended->comments };
-has author   => sub { shift->extended->author };
-has text     => sub { shift->extended->text };
+has parent      => sub { shift->extended->parent };
+has comments    => sub { shift->extended->comments };
+has author      => sub { shift->extended->author };
+has text        => sub { shift->extended->text };
+has attachments => sub { shift->extended->attachments };
 
 has url => sub ($self) {
     my $url = $self->api->base_url->clone->path( "wiki/" . $self->title );
@@ -33,7 +38,7 @@ has url => sub ($self) {
     return $url->to_string;
 };
 
-has rendered_text => sub ( $self ) {
+has rendered_text => sub ($self) {
 
     my $text = $self->text;
 
@@ -58,6 +63,7 @@ has rendered_text => sub ( $self ) {
     my $pre_mode = 0;
     my @lines;
     use Data::Dumper;
+
     # if ($self->version == 235 ) { die Dumper [ split("\n",  $text ) ] };
     for my $line ( split( "\n", $text ) ) {
         if ( $line =~ /<pre>/ ) {
@@ -92,7 +98,7 @@ has rendered_text => sub ( $self ) {
     if (@table) {
         push @lines, split( "\n", tablify( \@table ) );
     }
-    return join("\n",@lines);
+    return join( "\n", @lines );
 
 };
 
@@ -100,5 +106,12 @@ has rendered_text => sub ( $self ) {
 
 package App::pickaxe::Page::Extended;
 use Mojo::Base -base;
-has [qw(parent comments author text)];
+has [qw(parent comments author text attachments)];
+1;
+
+package App::pickaxe::Page::Attachment;
+use Mojo::Base -base;
+has [
+    qw(filename filesize content_url content_type created_on author description id)
+];
 1;

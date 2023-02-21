@@ -7,6 +7,7 @@ use Mojo::File 'tempfile', 'tempdir';
 use Mojo::Util 'decode', 'encode';
 use App::pickaxe::Getline 'getline';
 use App::pickaxe::SelectOption 'select_option', 'askyesno';
+use App::pickaxe::AttachmentMenu;
 
 has 'config';
 has 'pages' => sub { App::pickaxe::Pages->new };
@@ -18,6 +19,14 @@ sub open_in_browser ( $self, $key ) {
     return if $self->empty;
     use IPC::Cmd;
     IPC::Cmd::run( command => [ 'xdg-open', $self->pages->current->url ] );
+}
+
+sub view_attachments ( $self, $key ) {
+    my $menu = App::pickaxe::AttachmentMenu->new(
+        attachments => $self->pages->current->attachments,
+        api         => $self->api,
+    );
+    $menu->run( $self->config->keybindings );
 }
 
 sub next_item ( $self, $key ) {
@@ -156,12 +165,13 @@ sub edit_patch ( $self, $old_text, $new_text ) {
     ## cleaned up otherwise
     my $dir = tempdir;
 
-    my $patch = diff( $old_text, $new_text );
-    my $patch_file  = $dir->child('patch')->spurt( encode( 'utf8', $patch ) );
-    $patch_file->spurt( encode('utf8', rediff( $self->call_editor($patch_file) )));
+    my $patch      = diff( $old_text, $new_text );
+    my $patch_file = $dir->child('patch')->spurt( encode( 'utf8', $patch ) );
+    $patch_file->spurt(
+        encode( 'utf8', rediff( $self->call_editor($patch_file) ) ) );
 
     my $resolved_file = $dir->child('resolved');
-    my $input_file    = $dir->child('input')->spurt( encode( 'utf8', $old_text ) );
+    my $input_file = $dir->child('input')->spurt( encode( 'utf8', $old_text ) );
 
     if ( apply_patch( $patch_file, $resolved_file, $input_file ) ) {
         return decode( 'utf8', $resolved_file->slurp );
