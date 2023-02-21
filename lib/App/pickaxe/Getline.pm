@@ -1,7 +1,9 @@
 package App::pickaxe::Getline;
 use Mojo::Base -signatures, 'Exporter';
+
 use App::pickaxe::Keys 'getkey';
 use Curses;
+use Mojo::File 'path';
 
 our @EXPORT_OK = qw(getline);
 
@@ -176,8 +178,6 @@ sub cycle_shift ($array) {
     push @$array, $elt;
     return $elt;
 }
-
-use Mojo::File 'path';
 
 sub generate_filecompletions ($path) {
     $path = path($path||'.');
