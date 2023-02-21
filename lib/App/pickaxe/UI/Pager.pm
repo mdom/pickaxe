@@ -29,14 +29,14 @@ sub keybindings ($self) {
 
 sub set_text ( $self, $text ) {
     my @lines = split( "\n", $text );
-    $self->set_lines( @lines );
+    $self->set_lines(@lines);
 }
 
 sub find_toggle ( $self, $key ) {
     $self->find_active( !$self->find_active );
 }
 
-sub render ( $self ) {
+sub render ($self) {
     $self->next::method;
 
     if ( $self->find_active ) {

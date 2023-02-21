@@ -41,15 +41,15 @@ sub next_item ( $self, $key ) {
     $self->next_line($key);
 }
 
-sub prev_item ($self,$key) {
+sub prev_item ( $self, $key ) {
     $self->prev_line($key);
 }
 
-sub last_item ($self,$key) {
+sub last_item ( $self, $key ) {
     $self->bottom($key);
 }
 
-sub first_item ($self,$key) {
+sub first_item ( $self, $key ) {
     $self->top($key);
 }
 
@@ -57,7 +57,7 @@ sub first_line_on_page ($self) {
     return int( $self->current_line / $self->maxlines ) * $self->maxlines;
 }
 
-sub render( $self ) {
+sub render ($self) {
     $self->next::method;
     my $offset = $self->first_line_on_page;
     chgat( $self->current_line - $offset + 1, 0, -1, A_REVERSE, 0, 0 );
@@ -65,7 +65,7 @@ sub render( $self ) {
 
 sub set_lines ( $self, @lines ) {
     my $i = 0;
-    @lines = map { sprintf("%4d %s", ++$i, $_) } @lines;
+    @lines = map { sprintf( "%4d %s", ++$i, $_ ) } @lines;
     $self->next::method(@lines);
 }
 
