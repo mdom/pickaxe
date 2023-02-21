@@ -5,7 +5,7 @@ use App::pickaxe::Keys 'getkey';
 use App::pickaxe::Getline 'getline';
 use Mojo::Util 'decamelize';
 
-has 'lines' => sub { [] };
+has 'lines'   => sub { [] };
 has 'message' => '';
 has 'matches';
 
@@ -25,7 +25,7 @@ has moniker => sub ($self) {
 };
 
 sub statusbar ($self) {
-    return ('', '' );
+    return ( '', '' );
 }
 
 sub helpbar ($self) {
@@ -36,7 +36,7 @@ sub first_line_on_page ($self) {
     return $self->current_line;
 }
 
-sub set_lines ($self, @lines) {
+sub set_lines ( $self, @lines ) {
     $self->nlines( @lines + 0 );
     $self->lines( \@lines );
     $self->current_line(0);
@@ -132,8 +132,7 @@ sub find_next ( $self, $key, $direction = 1 ) {
     my $current;
     do {
         $current = $shifter->( $self->matches );
-    }
-    while ( $current->[0] == $self->current_line && $current != $start );
+    } while ( $current->[0] == $self->current_line && $current != $start );
 
     $self->find_goto_line( $self->matches->[0]->[0], $direction );
 
@@ -141,14 +140,14 @@ sub find_next ( $self, $key, $direction = 1 ) {
 }
 
 sub find_goto_line ( $self, $line, $direction ) {
-    if ( $line < $self->current_line && $direction == 1) {
+    if ( $line < $self->current_line && $direction == 1 ) {
         $self->message('Search wrapped to top.');
     }
     elsif ( $line > $self->current_line && $direction == -1 ) {
         $self->message('Search wrapped to bottom.');
     }
 
-    $self->goto_line( $line );
+    $self->goto_line($line);
 }
 
 sub find_next_reverse ( $self, $key ) {
@@ -253,10 +252,10 @@ sub bottom ( $self, $key ) {
     $self->goto_line( $self->nlines - $self->maxlines );
 }
 
-sub display_msg ($self, $msg) {
+sub display_msg ( $self, $msg ) {
     move( $LINES - 1, 0 );
     clrtoeol;
-    $msg = substr($msg, 0, $COLS);
+    $msg = substr( $msg, 0, $COLS );
     addstring($msg);
 }
 
