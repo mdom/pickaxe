@@ -24,13 +24,8 @@ has moniker => sub ($self) {
     return lc( decamelize($map) );
 };
 
-sub statusbar ($self) {
-    return ( '', '' );
-}
-
-sub helpbar ($self) {
-    return '';
-}
+has statusbar => '';
+has helpbar   => '';
 
 sub first_line_on_page ($self) {
     return $self->current_line;
@@ -259,9 +254,21 @@ sub display_msg ( $self, $msg ) {
     addstring($msg);
 }
 
-sub run ( $self, $keybindings ) {
-    $keybindings =
-      { %{ $self->keybindings }, %{ $keybindings->{ $self->moniker } } };
+sub display_help ( $self, $key ) {
+    my $keybindings = $self->current_keybindings;
+    my @lines;
+    for my $key ( sort keys %$keybindings ) {
+        push @lines, sprintf( "%-10s %s", $key, $keybindings->{$key} );
+    }
+    App::pickaxe::UI::Pager->new->helpbar("q:Quit")
+      ->statusbar( "Help for " . $self->moniker )->set_lines(@lines)->run;
+}
+
+has current_keybindings => sub { {} };
+
+sub run ( $self, $keybindings = {} ) {
+    $self->current_keybindings(
+      { %{ $self->keybindings }, %{ $keybindings->{ $self->moniker } || {} } });
 
     $self->render;
     while (1) {
@@ -269,7 +276,7 @@ sub run ( $self, $keybindings ) {
         next if !$key;
         $self->message('');
 
-        my $funcname = $keybindings->{$key};
+        my $funcname = $self->current_keybindings->{$key};
 
         if ( !$funcname ) {
             $self->message('Key is not bound.');
