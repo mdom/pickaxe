@@ -40,10 +40,6 @@ sub find_next ( $self, $key, $direction = 1) {
     $self->pages->index( $self->current_line );
 }
 
-sub update_current_page ($self) {
-    $self->pages->set( $self->api->page( $self->pages->current->title ) );
-}
-
 sub compile_index_format ($self) {
     my $index_fmt = $self->config->index_format;
 
