@@ -2,6 +2,31 @@ package App::pickaxe::UI::Pager;
 use Mojo::Base -signatures, App::pickaxe::UI::Base;
 use Curses;
 
+sub keybindings ($self) {
+    return {
+        'q'           => 'quit',
+        '<PageDown>'  => 'next_screen',
+        '<Space>'     => 'next_screen',
+        '<PageUp>'    => 'prev_page',
+        '<Down>'      => 'next_line',
+        '<Up>'        => 'prev_line',
+        '<Return>'    => 'next_line',
+        '<Backspace>' => 'prev_line',
+        '<Resize>'    => 'render',
+        '<Home>'      => 'top',
+        '<End>'       => 'bottom',
+        '<Left>'      => 'scroll_left',
+        '<Right>'     => 'scroll_right',
+        '/'           => 'find',
+        '<Esc>/'      => 'find_reverse',
+        'n'           => 'find_next',
+        'N'           => 'find_next_reverse',
+        '<Backslash>' => 'find_toggle',
+        '^L'          => 'force_render',
+        '?'           => 'display_help',
+    };
+}
+
 sub set_text ( $self, $text ) {
     my @lines = split( "\n", $text );
     $self->set_lines( @lines );
