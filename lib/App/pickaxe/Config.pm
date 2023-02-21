@@ -21,6 +21,7 @@ has keybindings => sub {
             j          => 'next_item',
             k          => 'prev_item',
             q          => 'quit',
+            's'        => 'save_attachment',
             '<Return>' => 'view_attachment',
         },
         index => {
