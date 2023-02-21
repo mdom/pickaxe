@@ -3,7 +3,6 @@ use Mojo::Base -signatures, -base;
 use App::pickaxe::Api;
 use Curses;
 
-use Algorithm::Diff;
 use Mojo::File 'tempfile';
 use Mojo::Util 'decode', 'encode';
 use App::pickaxe::Getline 'getline';
