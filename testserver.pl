@@ -68,10 +68,10 @@ get '/projects/foo/wiki/:title', [ format => ['json'] ] => sub {
 };
 
 put '/projects/foo/wiki/:title', [ format => ['json'] ] => sub {
-    my $c     = shift;
-    my $title = $c->stash('title');
-    my $text  = $c->req->json->{wiki_page}->{text};
-    my $comment  = $c->req->json->{wiki_page}->{comment} || '';
+    my $c        = shift;
+    my $title    = $c->stash('title');
+    my $text     = $c->req->json->{wiki_page}->{text};
+    my $comments = $c->req->json->{wiki_page}->{comments} || '';
     my ( $uid, $name ) = ( getpwuid($<) )[ 2, 6 ];
     my $author = { id => $uid, name => $name };
 
@@ -88,7 +88,7 @@ put '/projects/foo/wiki/:title', [ format => ['json'] ] => sub {
         $new_page->{text}       = $text;
         $new_page->{updated_on} = $time;
         $new_page->{author}     = $author;
-        $new_page->{comment}    = $comment;
+        $new_page->{comments}   = $comments;
         $new_page->{version}++;
 
         push @{ $pages{$title} }, $new_page;
@@ -101,7 +101,7 @@ put '/projects/foo/wiki/:title', [ format => ['json'] ] => sub {
             title      => $title,
             text       => $text,
             author     => $author,
-            comments   => $comment,
+            comments   => $comments,
             created_on => $time,
             updated_on => $time,
             version    => 1,
