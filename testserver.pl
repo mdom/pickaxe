@@ -43,6 +43,18 @@ get '/projects/foo/wiki/:title/:version', [ format => ['json'] ] => sub {
         $c->render( status => 404, text => '' );
     }
 };
+get '/dump/:title', [ format => ['json'] ] => sub ($c) {
+    $c->render(
+        json => {
+            wiki_pages => {
+                map {
+                    $_ => [ map { my $x = {%$_}; delete $x->{api}; $x }
+                          @{ $pages{$_} } ]
+                } keys %pages
+            }
+        }
+    );
+};
 
 get '/projects/foo/wiki/:title', [ format => ['json'] ] => sub {
     my $c    = shift;
