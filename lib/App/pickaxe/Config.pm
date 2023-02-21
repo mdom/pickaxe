@@ -13,7 +13,7 @@ has pass_cmd    => sub { [] };
 has yank_cmd    => sub { ['xclip'] };
 has keybindings => sub {
     return {
-        attachmentmenu => {
+        attachment_menu => {
             's'        => 'save_attachment',
             '<Return>' => 'view_attachment',
         },

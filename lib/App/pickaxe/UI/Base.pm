@@ -19,9 +19,9 @@ has find_active => 0;
 has maxlines => sub { $LINES - 3 };
 
 has moniker => sub ($self) {
-    my $map = lc(ref($self));
+    my $map = ref($self);
     $map =~ s/.*:://;
-    decamelize($map)
+    return lc( decamelize($map) );
 };
 
 sub statusbar ($self) {
