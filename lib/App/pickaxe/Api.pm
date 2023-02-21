@@ -122,9 +122,8 @@ sub projects ($self) {
     return \@result;
 }
 
-sub search ( $self, $query ) {
-    my %pages = map { $_->{title} => $_ } @{ $self->pages };
-    my $res   = $self->get(
+sub _search ( $self, $query, $offset = 0 ) {
+    my $res = $self->get(
         "search.json",
         q          => $query,
         wiki_pages => 1,
@@ -132,36 +131,28 @@ sub search ( $self, $query ) {
         offset     => 0
     );
     return if !$res->is_success;
-    my $data           = $res->json;
-    my @matching_pages = @{ $data->{results} };
+    return $res->json;
+}
 
-    return if !@matching_pages;
+sub search ( $self, $query ) {
+    my $data = $self->_search($query);
+    return if !$data;
+    my @results = @{ $data->{results} };
+
+    return if !@results;
 
     my $total_count = $data->{total_count};
     my $offset      = $data->{offset};
-    while ( $total_count != @matching_pages ) {
-        my $res = $self->get(
-            "search.json",
-            q          => $query,
-            wiki_pages => 1,
-            limit      => 100,
-            offset     => $offset + 100,
-        );
-        return if !$res->is_success;
-        my $data = $res->json;
+    while ( $total_count != @results ) {
+        my $data = $self->_search( $query, $offset + 100 );
+        last if !$data;
         $offset = $data->{offset};
-        push @matching_pages, @{ $data->{results} };
+        push @results, @{ $data->{results} };
     }
-
-    for my $page (@matching_pages) {
-        $page->{title} =~ s/^Wiki: //;
-        $page->{text} = delete $page->{description};
-        $page = { %$page, %{ $pages{ $page->{title} } } };
-        $page->{text} =~ s/\r\n/\n/gs;
-        delete $page->{datetime};
-        $page = App::pickaxe::Page->new($page)->api($self);
-    }
-    return \@matching_pages;
+    return [
+        map { $self->page( $_, -1 ) }
+        map { $_->{title} =~ /^Wiki: (.*)/ } @results
+    ];
 }
 
 1;
