@@ -5,6 +5,8 @@ use Curses;
 
 use Mojo::File 'tempfile', 'tempdir';
 use Mojo::Util 'decode', 'encode';
+use Mojo::Loader 'data_section';
+use Mojo::Template;
 use App::pickaxe::Getline 'getline';
 use App::pickaxe::SelectOption 'select_option', 'askyesno';
 use App::pickaxe::AttachmentMenu;
@@ -165,10 +167,16 @@ sub edit_patch ( $self, $old_text, $new_text ) {
     ## cleaned up otherwise
     my $dir = tempdir;
 
-    my $patch      = diff( $old_text, $new_text );
+    my $patch = diff( $old_text, $new_text );
+
+    my $template = data_section( 'App::pickaxe::Base', 'patch_template.txt' );
+    $patch = Mojo::Template->new->render( $template, $patch );
+
     my $patch_file = $dir->child('patch')->spurt( encode( 'utf8', $patch ) );
-    $patch_file->spurt(
-        encode( 'utf8', rediff( $self->call_editor($patch_file) ) ) );
+    my $new_patch  = $self->call_editor($patch_file);
+    $new_patch =~ s/^#.*?\n//smg;
+
+    $patch_file->spurt( encode( 'utf8', rediff($new_patch) ) );
 
     my $resolved_file = $dir->child('resolved');
     my $input_file = $dir->child('input')->spurt( encode( 'utf8', $old_text ) );
@@ -329,3 +337,11 @@ sub set_pages ( $self, $pages ) {
 }
 
 1;
+
+__DATA__
+
+@@ patch_template.txt
+<%= $_[0] %>
+# To remove '-' lines, make them ' ' lines (context).
+# To remove '+' lines, delete them.
+# Lines starting with # will be removed.
