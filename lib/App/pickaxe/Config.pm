@@ -113,7 +113,7 @@ has keybindings => sub {
 };
 
 has index_time_format => "%Y-%m-%d %H:%M:%S";
-has index_format      => '%4n %-22u %t';
+has index_format      => '%-22u %t';
 
 sub base_url ( $self, $url = undef ) {
     if ($url) {

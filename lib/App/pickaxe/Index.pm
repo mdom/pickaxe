@@ -47,7 +47,6 @@ sub compile_index_format ($self) {
     my @args;
 
     my %identifier = (
-        n => sub { $_[0]->{index} },
         t => sub { my $t = $_[0]->{title}; $t =~ s/_/ /g; $t },
         u => sub { $self->format_time( $_[0]->{'updated_on'} ) },
         c => sub { $self->format_time( $_[0]->{'created_on'} ) },
@@ -91,7 +90,6 @@ sub sort_pages ( $self, $pages ) {
 sub set_pages ( $self, $pages ) {
     $self->next::method( $pages );
     $self->regenerate_index;
-
 }
 
 sub regenerate_index ( $self ) {

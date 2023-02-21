@@ -28,6 +28,12 @@ sub render( $self ) {
     chgat( $self->current_line - $offset + 1, 0, -1, A_REVERSE, 0, 0 );
 }
 
+sub set_lines ( $self, @lines ) {
+    my $i = 0;
+    @lines = map { sprintf("%4d %s", ++$i, $_) } @lines;
+    $self->next::method(@lines);
+}
+
 sub bottom ( $self, $key ) {
     $self->goto_line( $self->nlines );
 }
