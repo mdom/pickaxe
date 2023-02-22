@@ -23,6 +23,11 @@ sub open_in_browser ( $self, $key ) {
     IPC::Cmd::run( command => [ 'xdg-open', $self->pages->current->url ] );
 }
 
+sub browser_links ( $self, $key ) {
+    use App::pickaxe::LinkBrowser;
+    App::pickaxe::LinkBrowser->run( pages => $self->pages );
+}
+
 sub view_attachments ( $self, $key ) {
     my $menu = App::pickaxe::AttachmentMenu->new(
         attachments => $self->pages->current->attachments,
@@ -32,11 +37,23 @@ sub view_attachments ( $self, $key ) {
 }
 
 sub next_item ( $self, $key ) {
-    $self->pages->next;
+    $self->next::method($key);
+    $self->pages->set_index( $self->current_line );
 }
 
 sub prev_item ( $self, $key ) {
-    $self->pages->prev;
+    $self->next::method($key);
+    $self->pages->set_index( $self->current_line );
+}
+
+sub first_item ( $self, $key ) {
+    $self->next::method($key);
+    $self->pages->set_index( $self->current_line );
+}
+
+sub last_item ( $self, $key ) {
+    $self->next::method($key);
+    $self->pages->set_index( $self->current_line );
 }
 
 my %sort_options = (

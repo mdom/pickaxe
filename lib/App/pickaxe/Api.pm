@@ -8,7 +8,7 @@ has base_url => sub {
     die "App::pickaxe::Api->base_url undefined.";
 };
 
-has ua => sub { Mojo::UserAgent->new };
+has ua    => sub { Mojo::UserAgent->new };
 has cache => sub { {} };
 
 sub get ( $self, $path, %parameters ) {
@@ -58,25 +58,25 @@ sub delete ( $self, $title ) {
 sub pages ($self) {
     my $res = $self->get("wiki/index.json");
     for my $page ( @{ $res->json->{wiki_pages} } ) {
-        my $page = App::pickaxe::Page->new($page)->api($self);
+        my $page  = App::pickaxe::Page->new($page)->api($self);
         my $title = $page->title;
-        $self->cache->{ $title }->[ $page->version ] = $page
+        $self->cache->{$title}->[ $page->version ] = $page;
     }
-    return [map { $_->[-1] } values $self->cache->%*];
+    return [ map { $_->[-1] } values $self->cache->%* ];
 }
 
 sub page ( $self, $title, $version = undef ) {
-    if ( !$version || !$self->cache->{ $title }->[$version] ) {
+    if ( !$version || !$self->cache->{$title}->[$version] ) {
         my $url = $version ? "wiki/$title/$version.json" : "wiki/$title.json";
         my $res = $self->get($url);
         if ( $res->is_success ) {
             my $page = $res->json->{wiki_page};
             $page->{text} =~ s/\r//g;
-            $self->cache->{ $title }->[ $page->{version} ] =
-                App::pickaxe::Page->new( $page )->api($self);
+            $self->cache->{$title}->[ $page->{version} ] =
+              App::pickaxe::Page->new($page)->api($self);
         }
     }
-    return $self->cache->{ $title }->[ $version || -1];
+    return $self->cache->{$title}->[ $version || -1 ];
 }
 
 sub projects ($self) {

@@ -5,6 +5,14 @@ has helpbar => "q:Quit e:Edit /:Find o:Open y:Yank D:Delete ?:Help";
 has 'old_page';
 has 'version';
 
+sub next_item ( $self, $key ) {
+    $self->pages->next;
+}
+
+sub prev_item ( $self, $key ) {
+    $self->pages->prev;
+}
+
 sub statusbar ($self) {
     my $base  = $self->api->base_url->clone->query( key => undef );
     my $page =  $self->api->page( $self->pages->current->title, $self->version );
