@@ -4,12 +4,12 @@ use Curses;
 
 sub keybindings ($self) {
     return {
-        '<End>'      => 'last_item',
-        '<Home>'     => 'first_item',
-        '<Down>'     => 'next_item',
-        '<Up>'       => 'prev_item',
-        j            => 'next_item',
-        k            => 'prev_item',
+        '<End>'      => 'last_line',
+        '<Home>'     => 'first_line',
+        '<Down>'     => 'next_line',
+        '<Up>'       => 'prev_line',
+        j            => 'next_line',
+        k            => 'prev_line',
         '<PageDown>' => 'next_screen',
         '<PageUp>'   => 'prev_page',
         '<Left>'     => 'prev_page',
@@ -35,22 +35,6 @@ sub keybindings ($self) {
         0            => 'jump',
         '^L'         => 'force_render',
     };
-}
-
-sub next_item ( $self, $key ) {
-    $self->next_line($key);
-}
-
-sub prev_item ( $self, $key ) {
-    $self->prev_line($key);
-}
-
-sub last_item ( $self, $key ) {
-    $self->bottom($key);
-}
-
-sub first_item ( $self, $key ) {
-    $self->top($key);
 }
 
 sub first_line_on_page ($self) {

@@ -268,7 +268,11 @@ has current_keybindings => sub { {} };
 
 sub run ( $self, $keybindings = {} ) {
     $self->current_keybindings(
-      { %{ $self->keybindings }, %{ $keybindings->{ $self->moniker } || {} } });
+        {
+            %{ $self->keybindings },
+            %{ $keybindings->{ $self->moniker } || {} } 
+        }
+    );
 
     $self->render;
     while (1) {

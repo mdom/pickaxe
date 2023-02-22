@@ -79,6 +79,7 @@ sub view_page ( $self, $key ) {
     App::pickaxe::Pager->new( config => $self->config, pages => $self->pages, api => $self->api )->run;
     ## pages could be changed, so we regenerate the index
     $self->regenerate_index;
+    $self->current_line( $self->pages->index );
     $self->render;
 }
 
@@ -176,7 +177,6 @@ sub run ($self) {
 }
 
 sub render ( $self ) {
-    $self->current_line( $self->pages->index );
     $self->next::method;
 }
 
