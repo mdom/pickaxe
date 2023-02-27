@@ -165,8 +165,24 @@ sub jump ( $self, $key ) {
     $self->pages->set_index( $self->current_line );
 }
 
-sub prev_item ( $self, $key ) {
-    $self->pages->prev;
+sub next_line ( $self, $key ) {
+    $self->next::method($key);
+    $self->pages->set_index( $self->current_line );
+}
+
+sub prev_line ( $self, $key ) {
+    $self->next::method($key);
+    $self->pages->set_index( $self->current_line );
+}
+
+sub first_line ( $self, $key ) {
+    $self->next::method($key);
+    $self->pages->set_index( $self->current_line );
+}
+
+sub last_line ( $self, $key ) {
+    $self->next::method($key);
+    $self->pages->set_index( $self->current_line );
 }
 
 sub run ($self) {
