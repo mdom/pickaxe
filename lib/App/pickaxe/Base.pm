@@ -10,6 +10,7 @@ use Mojo::Template;
 use App::pickaxe::Getline 'getline';
 use App::pickaxe::SelectOption 'select_option', 'askyesno';
 use App::pickaxe::AttachmentMenu;
+use App::pickaxe::LinkBrowser;
 
 has 'config';
 has 'pages' => sub { App::pickaxe::Pages->new };
@@ -23,9 +24,30 @@ sub open_in_browser ( $self, $key ) {
     IPC::Cmd::run( command => [ 'xdg-open', $self->pages->current->url ] );
 }
 
-sub browser_links ( $self, $key ) {
-    use App::pickaxe::LinkBrowser;
-    App::pickaxe::LinkBrowser->run( pages => $self->pages );
+sub follow_links ( $self, $key ) {
+    my $re = qr{
+    ## textile links
+    (?:\[\[ (.*?) (?:\#.*?)? (?:\|.*?)? \]\])
+    |
+    ## normal urls
+    (https?://[^\s?#'"<>]+)
+   }x;
+    my @links = grep defined, $self->pages->current->text =~ /$re/g;
+    if ( !@links ) {
+        $self->message('No links found.');
+        return;
+    }
+    my $browser = App::pickaxe::LinkBrowser->new(
+        links => \@links,
+        pages => $self->pages,
+        api   => $self->api
+    );
+    $browser->run( $self->config->keybindings );
+    if ( $self->moniker eq 'index' ) {
+        if ( $browser->call_pager ) {
+            $self->view_page('');
+        }
+    }
 }
 
 sub view_attachments ( $self, $key ) {
@@ -34,26 +56,6 @@ sub view_attachments ( $self, $key ) {
         api         => $self->api,
     );
     $menu->run( $self->config->keybindings );
-}
-
-sub next_item ( $self, $key ) {
-    $self->next::method($key);
-    $self->pages->set_index( $self->current_line );
-}
-
-sub prev_item ( $self, $key ) {
-    $self->next::method($key);
-    $self->pages->set_index( $self->current_line );
-}
-
-sub first_item ( $self, $key ) {
-    $self->next::method($key);
-    $self->pages->set_index( $self->current_line );
-}
-
-sub last_item ( $self, $key ) {
-    $self->next::method($key);
-    $self->pages->set_index( $self->current_line );
 }
 
 my %sort_options = (

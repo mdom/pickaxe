@@ -16,7 +16,7 @@ sub switch_to( $self, $elt ) {
     for ( my $i = 0; $i < @{$self->array}; $i++ ) {
         if ($elt->{title} eq $self->array->[$i]->{title} ) {
             $self->index( $i );
-            return;
+            return 1;
         }
     }
     return;
@@ -46,12 +46,11 @@ sub set ( $self, $pages ) {
     $self->array( $pages );
 
     ## Always try to preserve the current page the user selected ...
-    $self->switch_to($current);
-
-    ## .. if that's not possible select the last one
-    if ( $self->index >= $self->count ) {
-        $self->index( $self->count - 1 );
+    ## .. if that's not possible select the first
+    if ( !$self->switch_to($current) ) {
+        $self->index( 0 );
     }
+
     return $self;
 }
 
