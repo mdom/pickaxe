@@ -1,11 +1,10 @@
 package App::pickaxe::LinkBrowser;
 use Mojo::Base 'App::pickaxe::UI::Index', -signatures;
 
-has links => sub { [] };
-has [ 'pages', 'api' ];
+has [ 'links', 'api', 'config' ];
+
 has helpbar    => "q:Quit";
 has statusbar  => "pickaxe: Link Browser";
-has call_pager => 0;
 
 sub follow_link ( $self, $key ) {
     my $link = $self->links->[ $self->current_line ];
@@ -15,10 +14,11 @@ sub follow_link ( $self, $key ) {
             $self->message(qq{Can't find page "$link"});
             return;
         }
-        $self->pages->set( $self->api->pages );
-        $self->pages->switch_to($page);
-        $self->call_pager(1);
-        $self->exit_after_call(1);
+        App::pickaxe::Pager->new(
+            config => $self->config,
+            pages  => App::pickaxe::Pages->new->set( [$page] ),
+            api    => $self->api
+        )->run;
         return;
     }
 
@@ -26,9 +26,9 @@ sub follow_link ( $self, $key ) {
     IPC::Cmd::run( command => [ 'xdg-open', $link ] );
 }
 
-sub run ( $self, $bindings ) {
+sub run ( $self ) {
     $self->set_lines( @{ $self->links } );
-    $self->next::method($bindings);
+    $self->next::method($self->config->keybindings);
 }
 
 1;
