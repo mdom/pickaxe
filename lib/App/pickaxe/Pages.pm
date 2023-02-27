@@ -33,7 +33,8 @@ sub add ( $self, $page ) {
 }
 
 sub delete_current ( $self ) {
-    delete $self->array->[ $self->index ];
+    splice @{ $self->array }, $self->index, 1;
+    $self->index( $self->index - 1 ) if !$self->array->[ $self->index ];
 }
 
 sub set ( $self, $pages ) {
