@@ -122,7 +122,11 @@ get '/projects/foo/search', [ format => ['json'] ] => sub {
     my $offset = $c->param('offset') || 0;
     my $limit  = $c->param('limit')  || 25;
 
-    my @results = grep { $_->{text} =~ /\Q$q/ } map { $_->[-1] } values %pages;
+    my @results = map {
+        my $o = {%$_};
+        $o->{title} = "Wiki: " . $o->{title};
+        $o;
+    } grep { $_->{text} =~ /\Q$q/ } map { $_->[-1] } values %pages;
 
     $c->render(
         json => {
