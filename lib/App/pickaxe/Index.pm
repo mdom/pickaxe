@@ -102,6 +102,7 @@ sub regenerate_index ( $self ) {
         push @lines, sprintf( $fmt, map { $_->($page) } @args );
     }
     $self->set_lines(@lines);
+    $self->goto_line( $self->pages->index );
 }
 
 sub search ( $self, $key ) {
