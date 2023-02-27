@@ -27,6 +27,11 @@ sub current ($self, $page = undef) {
     return $self->array->[ $self->index ];
 }
 
+sub add ( $self, $page ) {
+    push @{ $self->array }, $page;
+    $self->set($self->array);
+}
+
 sub delete_current ( $self ) {
     delete $self->array->[ $self->index ];
 }

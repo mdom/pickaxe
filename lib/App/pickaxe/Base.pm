@@ -112,7 +112,6 @@ sub delete_page ( $self, $key ) {
             return;
         }
         $self->pages->delete_current;
-        $self->update_pages;
         $self->message("Deleted.");
     }
 }
@@ -330,7 +329,7 @@ sub add_page ( $self, $key ) {
     if ($new_text) {
         if ( askyesno("Save page $title?") ) {
             $self->api->save( $title, $new_text );
-            $self->update_pages;
+            $self->pages->add( $self->api->page($title, -1));
             $self->message('Saved.');
         }
         else {

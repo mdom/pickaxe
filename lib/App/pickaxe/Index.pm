@@ -185,15 +185,20 @@ sub last_line ( $self, $key ) {
     $self->pages->set_index( $self->current_line );
 }
 
+sub add_page ( $self, $key ) {
+    $self->next::method($key);
+    $self->regenerate_index;
+}
+
+sub delete_page ( $self, $key ) {
+    $self->next::methog($key);
+    $self->regenerate_index;
+}
+
 sub run ($self) {
     $self->query_connection_details;
     $self->update_pages;
-
     $self->next::method( $self->config->keybindings );
-}
-
-sub render ( $self ) {
-    $self->next::method;
 }
 
 1;
