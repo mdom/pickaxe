@@ -37,17 +37,12 @@ sub follow_links ( $self, $key ) {
         $self->message('No links found.');
         return;
     }
+
     my $browser = App::pickaxe::LinkBrowser->new(
-        links => \@links,
-        pages => $self->pages,
-        api   => $self->api
-    );
-    $browser->run( $self->config->keybindings );
-    if ( $self->moniker eq 'index' ) {
-        if ( $browser->call_pager ) {
-            $self->view_page('');
-        }
-    }
+        api    => $self->api,
+        config => $self->config,
+        links  => \@links,
+    )->run;
 }
 
 sub view_attachments ( $self, $key ) {
