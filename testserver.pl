@@ -18,13 +18,14 @@ for my $file (@files) {
 
     push @{ $pages{$basename} },
       {
-        title      => $basename,
-        text       => decode( 'utf-8', $file->slurp ),
-        author     => { id => $uid, name => $name },
-        comments   => '',
-        created_on => $mtime,
-        updated_on => $mtime,
-        version    => 1,
+        title       => $basename,
+        text        => decode( 'utf-8', $file->slurp ),
+        author      => { id => $uid, name => $name },
+        comments    => '',
+        created_on  => $mtime,
+        updated_on  => $mtime,
+        version     => 1,
+        attachments => [],
       };
 }
 
@@ -98,13 +99,14 @@ put '/projects/foo/wiki/:title', [ format => ['json'] ] => sub {
     else {
         push @{ $pages{$title} },
           {
-            title      => $title,
-            text       => $text,
-            author     => $author,
-            comments   => $comments,
-            created_on => $time,
-            updated_on => $time,
-            version    => 1,
+            title       => $title,
+            text        => $text,
+            author      => $author,
+            comments    => $comments,
+            created_on  => $time,
+            updated_on  => $time,
+            version     => 1,
+            attachments => [],
           };
         $c->render( status => 201, text => '' );
     }
