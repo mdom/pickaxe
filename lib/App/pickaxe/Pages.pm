@@ -30,6 +30,7 @@ sub current ($self, $page = undef) {
 sub add ( $self, $page ) {
     push @{ $self->array }, $page;
     $self->set($self->array);
+    $self->switch_to($page);
 }
 
 sub delete_current ( $self ) {
