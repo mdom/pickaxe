@@ -242,7 +242,7 @@ sub edit_page ( $self, $key ) {
             && $self->save_page( $title, $new_text, $version ) )
         {
             $self->message('Saved.');
-            $self->update_pages;
+            $self->pages->replace_current( $self->api->page($title) );
             return;
         }
         $self->message('Not saved.');
@@ -329,7 +329,7 @@ sub add_page ( $self, $key ) {
     if ($new_text) {
         if ( askyesno("Save page $title?") ) {
             $self->api->save( $title, $new_text );
-            $self->pages->add( $self->api->page($title, -1));
+            $self->pages->add( $self->api->page($title) );
             $self->message('Saved.');
         }
         else {
