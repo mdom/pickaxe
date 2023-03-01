@@ -4,8 +4,8 @@ use Curses;
 
 sub keybindings ($self) {
     return {
-        '<End>'      => 'last_line',
-        '<Home>'     => 'first_line',
+        '<End>'      => 'bottom',
+        '<Home>'     => 'top',
         '<Down>'     => 'next_line',
         '<Up>'       => 'prev_line',
         j            => 'next_line',
