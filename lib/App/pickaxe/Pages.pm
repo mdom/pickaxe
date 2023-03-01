@@ -6,36 +6,40 @@ has array => sub { [] };
 
 has 'order' => 'reverse_updated_on';
 
-sub sort ($self, $order) {
+sub sort ( $self, $order ) {
     $self->order($order);
-    $self->set($self->array);
+    $self->set( $self->array );
 }
 
-sub switch_to( $self, $elt ) {
+sub switch_to ( $self, $elt ) {
     return if !$elt;
-    for ( my $i = 0; $i < @{$self->array}; $i++ ) {
-        if ($elt->{title} eq $self->array->[$i]->{title} ) {
-            $self->index( $i );
+    for ( my $i = 0 ; $i < @{ $self->array } ; $i++ ) {
+        if ( $elt->{title} eq $self->array->[$i]->{title} ) {
+            $self->index($i);
             return 1;
         }
     }
     return;
 }
 
-sub current ($self, $page = undef) {
+sub current ( $self, $page = undef ) {
     $self->array->[ $self->index ] = $page if $page;
     return $self->array->[ $self->index ];
 }
 
 sub add ( $self, $page ) {
     push @{ $self->array }, $page;
-    $self->set($self->array);
+    $self->set( $self->array );
     $self->switch_to($page);
 }
 
-sub delete_current ( $self ) {
+sub delete_current ($self) {
     splice @{ $self->array }, $self->index, 1;
     $self->index( $self->index - 1 ) if !$self->array->[ $self->index ];
+}
+
+sub replace_current ( $self, $page ) {
+    $self->array->[ $self->index ] = $page;
 }
 
 sub set ( $self, $pages ) {
@@ -50,27 +54,27 @@ sub set ( $self, $pages ) {
         $pages = [ reverse @$pages ];
     }
 
-    $self->array( $pages );
+    $self->array($pages);
 
     ## Always try to preserve the current page the user selected ...
     ## .. if that's not possible select the first
     if ( !$self->switch_to($current) ) {
-        $self->index( 0 );
+        $self->index(0);
     }
 
     return $self;
 }
 
-sub next ( $self ) {
+sub next ($self) {
     $self->set_index( $self->index + 1 );
 }
 
-sub prev ( $self ) {
+sub prev ($self) {
     $self->set_index( $self->index + -1 );
 }
 
 sub set_index ( $self, $index ) {
-    $self->index( $index );
+    $self->index($index);
     if ( $index < 0 ) {
         $self->index(0);
     }
@@ -79,15 +83,15 @@ sub set_index ( $self, $index ) {
     }
 }
 
-sub count ( $self ) {
+sub count ($self) {
     scalar $self->array->@*;
 }
 
-sub each ( $self ) {
+sub each ($self) {
     $self->array->@*;
 }
 
-sub empty ( $self ) {
+sub empty ($self) {
     $self->count == 0;
 }
 
