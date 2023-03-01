@@ -3,6 +3,7 @@ use Mojo::Base -signatures, -base;
 
 use Mojo::UserAgent;
 use App::pickaxe::Page;
+use Mojo::File 'path';
 
 has base_url => sub {
     die "App::pickaxe::Api->base_url undefined.";
@@ -40,10 +41,47 @@ sub save ( $self, $title, $text, $version = undef ) {
     elsif ( $res->code == 409 ) {
         return 0;
     }
-    else {
-        die( 'Error saving wiki page: ' . $res->message );
-    }
+    die( 'Error saving wiki page: ' . $res->message );
+}
 
+sub attach_files ( $self, $title, @files ) {
+    my $url = $self->base_url->clone->path("/uploads.json");
+    my @tokens;
+    for my $file (@files) {
+        my $asset = Mojo::Asset::File->new( path => $file );
+        my $post  = $self->ua->build_tx(
+            POST => $url => { 'Content-Type' => 'application/octet-stream' } );
+        $post->req->content->asset($asset);
+        my $tx = $self->ua->start($post);
+        push @tokens,
+          {
+            token    => $tx->res->json->{upload}->{token},
+            filename => path($file)->basename
+          };
+    }
+    while (1) {
+        my $page = $self->page($title);
+        my $res  = $self->ua->put(
+            $url => json => {
+                wiki_page => {
+                    text    => $page->text,
+                    version => $page->version,
+                    uploads => \@tokens
+                }
+            }
+        )->result;
+
+        if ( $res->is_success ) {
+            return 1;
+        }
+        elsif ( $res->code == 422 ) {
+            return 0;
+        }
+        elsif ( $res->code == 409 ) {
+            next;
+        }
+        die "Unknown response code from server: " . $res->code . "\n";
+    }
 }
 
 sub delete ( $self, $title ) {
