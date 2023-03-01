@@ -191,6 +191,11 @@ sub add_page ( $self, $key ) {
     $self->regenerate_index;
 }
 
+sub edit_page ( $self, $key ) {
+    $self->next::method($key);
+    $self->regenerate_index;
+}
+
 sub delete_page ( $self, $key ) {
     $self->next::method($key);
     $self->regenerate_index;
