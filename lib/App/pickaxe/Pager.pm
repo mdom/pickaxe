@@ -43,6 +43,13 @@ sub run ($self) {
     $self->next::method( $self->config->{keybindings} );
 }
 
+sub delete_page ( $self, $key ) {
+    $self->next::method($key);
+    if ($self->pages->empty ) {
+        $self->exit_after_call(1);
+    }
+}
+
 sub first_version ( $self, $key ) {
     my $page = $self->pages->current;
     $self->version( 1 );

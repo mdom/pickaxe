@@ -1,16 +1,17 @@
 package App::pickaxe::Base;
 use Mojo::Base -signatures, -base;
-use App::pickaxe::Api;
-use Curses;
 
+use Curses;
 use Mojo::File 'tempfile', 'tempdir';
-use Mojo::Util 'decode', 'encode';
 use Mojo::Loader 'data_section';
 use Mojo::Template;
-use App::pickaxe::Getline 'getline';
-use App::pickaxe::SelectOption 'select_option', 'askyesno';
+use Mojo::Util 'decode', 'encode';
+
+use App::pickaxe::Api;
 use App::pickaxe::AttachmentMenu;
+use App::pickaxe::Getline 'getline';
 use App::pickaxe::LinkBrowser;
+use App::pickaxe::SelectOption 'select_option', 'askyesno';
 
 has 'config';
 has 'pages' => sub { App::pickaxe::Pages->new };
