@@ -66,6 +66,7 @@ sub compile_index_format ($self) {
 }
 
 sub view_page ( $self, $key ) {
+    return if $self->empty;
     $self->pages->unsubscribe( 'changed' );
     App::pickaxe::Pager->new(
         config => $self->config,

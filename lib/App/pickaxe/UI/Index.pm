@@ -43,6 +43,7 @@ sub first_line_on_page ($self) {
 
 sub render ($self) {
     $self->next::method;
+    return if $self->empty;
     my $offset = $self->first_line_on_page;
     chgat( $self->current_line - $offset + 1, 0, -1, A_REVERSE, 0, 0 );
 }
