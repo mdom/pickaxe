@@ -40,7 +40,6 @@ sub render ($self) {
 }
 
 sub run ($self) {
-    my $page = $self->pages->current;
     $self->next::method( $self->config->{keybindings} );
 }
 
@@ -70,10 +69,6 @@ sub next_version ( $self, $key ) {
         $self->version( $self->version + 1 );
         $self->set_text( $self->api->page( $page->title, $self->version)->rendered_text );
     }
-}
-
-sub empty ($self) {
-    $self->pages->empty;
 }
 
 1;

@@ -30,16 +30,6 @@ sub format_time ( $self, $time ) {
     strftime( $strftime_fmt, $sec, $min, $hour, $mday, $mon, $year );
 }
 
-sub find ( $self, $key, $direction = 0 ) {
-    $self->next::method($key, $direction);
-    $self->pages->index( $self->current_line );
-}
-
-sub find_next ( $self, $key, $direction = 1) {
-    $self->next::method($key, $direction);
-    $self->pages->index( $self->current_line );
-}
-
 sub compile_index_format ($self) {
     my $index_fmt = $self->config->index_format;
 
@@ -76,24 +66,20 @@ sub compile_index_format ($self) {
 }
 
 sub view_page ( $self, $key ) {
-    App::pickaxe::Pager->new( config => $self->config, pages => $self->pages, api => $self->api )->run;
+    $self->pages->unsubscribe( 'changed' );
+    App::pickaxe::Pager->new(
+        config => $self->config,
+        pages  => $self->pages,
+        api    => $self->api
+    )->run;
     ## pages could be changed, so we regenerate the index
     $self->regenerate_index;
     $self->current_line( $self->pages->index );
+    $self->pages->on( changed => sub { $self->regenerate_index } );
     $self->render;
 }
 
-sub sort_pages ( $self, $pages ) {
-    $self->next::method( $pages );
-    $self->regenerate_index;
-}
-
-sub set_pages ( $self, $pages ) {
-    $self->next::method( $pages );
-    $self->regenerate_index;
-}
-
-sub regenerate_index ( $self ) {
+sub regenerate_index ($self) {
     my ( $fmt, @args ) = $self->compile_index_format;
     my @lines;
     my $x = 1;
@@ -161,49 +147,15 @@ sub sync_pages ( $self, $key ) {
     $self->message("Updated.");
 }
 
-sub jump ( $self, $key ) {
-    $self->next::method( $key );
-    $self->pages->set_index( $self->current_line );
-}
-
-sub next_line ( $self, $key ) {
-    $self->next::method($key);
-    $self->pages->set_index( $self->current_line );
-}
-
-sub prev_line ( $self, $key ) {
-    $self->next::method($key);
-    $self->pages->set_index( $self->current_line );
-}
-
-sub first_line ( $self, $key ) {
-    $self->next::method($key);
-    $self->pages->set_index( $self->current_line );
-}
-
-sub last_line ( $self, $key ) {
-    $self->next::method($key);
-    $self->pages->set_index( $self->current_line );
-}
-
-sub add_page ( $self, $key ) {
-    $self->next::method($key);
-    $self->regenerate_index;
-}
-
-sub edit_page ( $self, $key ) {
-    $self->next::method($key);
-    $self->regenerate_index;
-}
-
-sub delete_page ( $self, $key ) {
-    $self->next::method($key);
-    $self->regenerate_index;
-}
-
 sub run ($self) {
     $self->query_connection_details;
+
+    $self->pages->on( changed => sub { $self->regenerate_index } );
+    $self->on( change_line =>
+          sub ($self) { $self->pages->set_index( $self->current_line ) } );
+
     $self->update_pages;
+
     $self->next::method( $self->config->keybindings );
 }
 

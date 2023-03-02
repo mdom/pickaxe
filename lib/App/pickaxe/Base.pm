@@ -19,7 +19,7 @@ has api =>
   sub { App::pickaxe::Api->new( base_url => shift->config->{base_url} ) };
 
 sub open_in_browser ( $self, $key ) {
-    return if $self->empty;
+    return if $self->pages->empty;
     use IPC::Cmd;
     IPC::Cmd::run( command => [ 'xdg-open', $self->pages->current->url ] );
 }
@@ -104,7 +104,7 @@ sub query_connection_details ($self) {
 }
 
 sub delete_page ( $self, $key ) {
-    return if $self->empty;
+    return if $self->pages->empty;
     my $title = $self->pages->current->title;
     if ( askyesno("Delete page $title?") ) {
         if ( my $error = $self->api->delete($title) ) {
@@ -224,7 +224,7 @@ sub handle_conflict ( $self, $title, $old_text ) {
 }
 
 sub edit_page ( $self, $key ) {
-    return if $self->empty;
+    return if $self->pages->empty;
 
     my $page = $self->pages->current;
 
