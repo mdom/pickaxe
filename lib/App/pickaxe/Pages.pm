@@ -1,5 +1,5 @@
 package App::pickaxe::Pages;
-use Mojo::Base -signatures, -base;
+use Mojo::Base 'Mojo::EventEmitter', -signatures;
 
 has index => 0;
 has array => sub { [] };
@@ -36,10 +36,12 @@ sub add ( $self, $page ) {
 sub delete_current ($self) {
     splice @{ $self->array }, $self->index, 1;
     $self->index( $self->index - 1 ) if !$self->array->[ $self->index ];
+    $self->emit('changed');
 }
 
 sub replace_current ( $self, $page ) {
     $self->array->[ $self->index ] = $page;
+    $self->set( $self->array );
 }
 
 sub set ( $self, $pages ) {
@@ -61,6 +63,7 @@ sub set ( $self, $pages ) {
     if ( !$self->switch_to($current) ) {
         $self->index(0);
     }
+    $self->emit('changed');
 
     return $self;
 }

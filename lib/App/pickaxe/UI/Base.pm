@@ -1,5 +1,5 @@
 package App::pickaxe::UI::Base;
-use Mojo::Base -base, -signatures;
+use Mojo::Base 'Mojo::EventEmitter', -signatures;
 use Curses;
 use App::pickaxe::Keys 'getkey';
 use App::pickaxe::Getline 'getline';
@@ -221,6 +221,7 @@ sub goto_line ( $self, $new ) {
     elsif ( $self->current_line > $self->nlines - 1 ) {
         $self->current_line( $self->nlines - 1 );
     }
+    $self->emit('change_line');
 }
 
 sub next_line ( $self, $key ) {
