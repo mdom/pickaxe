@@ -16,8 +16,6 @@ has current_column => 0;
 
 has find_active => 0;
 
-has maxlines => sub { $LINES - 3 };
-
 has moniker => sub ($self) {
     my $map = ref($self);
     $map =~ s/.*:://;
@@ -26,6 +24,8 @@ has moniker => sub ($self) {
 
 has statusbar => '';
 has helpbar   => '';
+
+sub maxlines { $LINES - 3 }
 
 sub first_line_on_page ($self) {
     return $self->current_line;
@@ -48,31 +48,25 @@ sub set_lines ( $self, @lines ) {
 }
 
 sub update_helpbar ($self) {
-    move( 0, 0 );
-    clrtoeol;
+    my $help = substr( $self->helpbar || '', 0, $COLS );
     attron(A_REVERSE);
-    my $help = $self->helpbar;
-    $help = substr( $help, 0, $COLS - 1 );
-    addstring( $help . ( ' ' x ( $COLS - length($help) ) ) );
+    addstring( 0, 0, ' ' x $COLS );
+    addstring( 0, 0, $self->helpbar );
     attroff(A_REVERSE);
 }
 
 sub update_statusbar ($self) {
-    move( $LINES - 2, 0 );
-    clrtoeol;
-    attron(A_REVERSE);
     my ( $left, $right ) = $self->statusbar;
-    $right //= '';
-    $left  //= '';
-    $left  = substr( $left,  0, $COLS - 1 );
-    $right = substr( $right, 0, $COLS - 1 );
-    addstring( $left . ( ' ' x ( $COLS - length($left) ) ) );
-    addstring( $LINES - 2, $COLS - 1 - length($right), $right );
+    $left  = substr( $left  || '', 0, $COLS );
+    $right = substr( $right || '', 0, $COLS - 1 );
+    attron(A_REVERSE);
+    addstring( $LINES - 2, 0,                         ' ' x $COLS );
+    addstring( $LINES - 2, 0,                         $left );
+    addstring( $LINES - 2, $COLS - length(" $right"), " $right" );
     attroff(A_REVERSE);
 }
 
-sub render ( $self, @ ) {
-
+sub render ($self) {
     erase;
     $self->update_statusbar;
     $self->update_helpbar;
@@ -280,6 +274,10 @@ sub run ( $self, $keybindings = {} ) {
     while (1) {
         my $key = getkey;
         next if !$key;
+        if ( $key eq '<Resize>' ) {
+            $self->render;
+            next;
+        }
         $self->message('');
 
         my $funcname = $self->current_keybindings->{$key};

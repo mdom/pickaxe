@@ -12,7 +12,6 @@ sub keybindings ($self) {
         '<Up>'        => 'prev_line',
         '<Return>'    => 'next_line',
         '<Backspace>' => 'prev_line',
-        '<Resize>'    => 'render',
         '<Home>'      => 'top',
         '<End>'       => 'bottom',
         '<Left>'      => 'scroll_left',
