@@ -14,7 +14,7 @@ has helpbar =>
   "q:Quit a:Add e:Edit s:Search /:Find b:Browse o:Order D:Delete ?:Help";
 
 sub statusbar ($self) {
-    my $base = $self->config->{base_url}->clone->query( key => undef );
+    my $base = $self->api->base_url->clone->query( key => undef );
     return "pickaxe: $base";
 }
 

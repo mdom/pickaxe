@@ -77,19 +77,19 @@ sub set_order ( $self, $key ) {
 }
 
 sub query_connection_details ($self) {
-    my $apikey = $self->config->{apikey} || $ENV{REDMINE_APIKEY};
+    my $apikey = $self->config->apikey || $ENV{REDMINE_APIKEY};
     if ($apikey) {
         $self->api->base_url->query( key => $apikey );
     }
     else {
-        my $username = $self->config->{username} || getline("Username: ");
+        my $username = $self->config->username || getline("Username: ");
         if ( !$username ) {
             die "No username was provided.";
         }
         my $password;
         if ( @{ $self->config->pass_cmd } ) {
             endwin;
-            my $cmd = "@{$self->config->{pass_cmd}}";
+            my $cmd = "@{$self->config->pass_cmd}";
             $password = qx($cmd);
             chomp($password);
         }

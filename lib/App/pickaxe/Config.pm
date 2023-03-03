@@ -8,6 +8,7 @@ use Curses;
 
 has 'username';
 has 'password';
+has 'apikey';
 
 has pass_cmd    => sub { [] };
 has yank_cmd    => sub { ['xclip'] };
