@@ -1,55 +1,3 @@
-#!/usr/bin/perl
-
-# TODO Caching in API
-# TODO threaded with parents in index?
-# TODO History
-# TODO Attachments
-
-use Mojo::Base -strict, -signatures;
-use Mojo::UserAgent;
-use App::pickaxe::Index;
-use App::pickaxe::Config;
-
-use Curses;
-
-our $VERSION = '0.01';
-
-## Read config before the screen is initialized
-## Config can write to stderr
-my $config = App::pickaxe::Config->new;
-
-my $url = shift;
-
-if ( $url ) {
-    $config->base_url( $url );
-}
-
-if ( !$config->base_url ) {
-    die "Usage: $0 BASE_URL\n";
-}
-
-initscr;
-keypad( stdscr, 1 );
-noecho;
-curs_set(0);
-
-$SIG{__WARN__} = sub { die @_ };
-
-eval { App::pickaxe::Index->new( config => $config )->run };
-
-my $err;
-if ($@) {
-    $err = $@;
-}
-
-endwin;
-if ($err) {
-    warn $err;
-}
-exit 0;
-
-__END__
-
 =pod
 
 =head1 NAME
@@ -187,4 +135,3 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-=cut
