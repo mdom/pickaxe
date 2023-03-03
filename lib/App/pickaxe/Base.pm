@@ -5,6 +5,7 @@ use Curses;
 use Mojo::File 'tempfile', 'tempdir';
 use Mojo::Loader 'data_section';
 use Mojo::Template;
+use Mojo::URL;
 use Mojo::Util 'decode', 'encode';
 
 use App::pickaxe::Api;
@@ -16,8 +17,10 @@ use App::pickaxe::SelectOption 'select_option', 'askyesno';
 has 'config';
 has 'pages' => sub { App::pickaxe::Pages->new };
 
-has api =>
-  sub { App::pickaxe::Api->new( base_url => shift->config->{base_url} ) };
+has api => sub {
+    App::pickaxe::Api->new(
+        base_url => Mojo::URL->new( shift->config->base_url ) );
+};
 
 sub open_in_browser ( $self, $key ) {
     return if $self->pages->empty;

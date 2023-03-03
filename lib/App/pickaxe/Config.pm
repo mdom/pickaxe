@@ -3,7 +3,6 @@ use Mojo::Base -signatures, -base;
 use Mojo::Util 'decode';
 use Mojo::File 'path';
 use Text::ParseWords 'shellwords';
-use Mojo::URL;
 use Curses;
 
 has 'username';
@@ -64,16 +63,7 @@ has keybindings => sub {
 
 has index_time_format => "%Y-%m-%d %H:%M:%S";
 has index_format      => '%-22u %t';
-
-sub base_url ( $self, $url = undef ) {
-    if ($url) {
-        if ( $url !~ m{/$} ) {
-            $url .= '/';
-        }
-        $self->{base_url} = Mojo::URL->new($url);
-    }
-    return $self->{base_url};
-}
+has base_url => sub { shift @ARGV };
 
 sub new ($class) {
     my $file = ( $ENV{XDG_CONFIG_HOME} || "$ENV{HOME}/.config" )
