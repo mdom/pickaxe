@@ -4,18 +4,20 @@ use Mojo::File 'tempfile';
 use Curses 'refresh';
 use Mojo::URL;
 use App::pickaxe::Getline 'getline';
+use App::pickaxe::Format;
 
 has helpbar     => "q:Quit";
 has statusbar   => "pickaxe: Attachments";
 has attachments => sub { [] };
 has 'api';
+has 'format' => '(%5s) %f';
 
 sub save_attachment ( $self, $key ) {
     my $attachment = $self->attachments->[ $self->current_line ];
-    my $path = Mojo::URL->new($attachment->content_url )->path;
-    my $file = getline("Save to file: ", { buffer => $attachment->filename });
+    my $path       = Mojo::URL->new( $attachment->content_url )->path;
+    my $file = getline( "Save to file: ", { buffer => $attachment->filename } );
     return if !$file;
-    $self->api->get($path)->save_to( $file );
+    $self->api->get($path)->save_to($file);
 }
 
 sub delete_attachment ( $self, $key ) {
@@ -35,8 +37,29 @@ sub view_attachment ( $self, $key ) {
 }
 
 sub run ( $self, $bindings ) {
-    $self->set_lines( map { $_->filename } @{ $self->attachments } );
+    my $fmt = App::pickaxe::Format->new(
+        format     => $self->format,
+        identifier => {
+            f => sub { $_[0]->filename },
+            t => sub { $_[0]->content_type || 'application/octetstream' },
+            s => sub { format_size( $_[0]->filesize || 0 ) },
+        },
+    );
+    $self->set_lines( map { $fmt->printf($_) } @{ $self->attachments } );
     $self->next::method($bindings);
+}
+
+sub format_size ($size) {
+    my $exp = 0;
+    state $units = [ '', qw(K M G T P) ];
+
+    for (@$units) {
+        last if $size < 1024;
+        $size /= 1024;
+        $exp++;
+    }
+
+    return sprintf( "%.0f%s", $size, $units->[$exp] );
 }
 
 1;
