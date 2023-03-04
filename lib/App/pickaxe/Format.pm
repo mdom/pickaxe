@@ -9,7 +9,7 @@ has _format => sub ($self) {
     my $printf_fmt = '';
     my @subs;
 
-    while (1) {
+    while ( $format !~ /\G$/gc ) {
         if ( $format =~ /\G%(-?\d+(?:.\d)?)?([a-zA-Z])/gc ) {
             my ( $mod, $format ) = ( $1, $2 );
             $mod //= '';
@@ -23,9 +23,6 @@ has _format => sub ($self) {
         }
         elsif ( $format =~ /\G([^%]+)/gc ) {
             $printf_fmt .= $1;
-        }
-        elsif ( $format =~ /\G$/gc ) {
-            last;
         }
     }
     return [ $printf_fmt, @subs ];
