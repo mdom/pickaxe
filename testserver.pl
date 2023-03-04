@@ -4,12 +4,14 @@ use Mojolicious::Lite -signatures;
 use Mojo::File 'path';
 use Mojo::Util 'decode';
 use Mojo::Date;
+use Digest::SHA1 qw(sha1_hex);
 
 my $dir = $ENV{MOJO_HOME};
 
 my %pages;
 
 my @files = path($dir)->list->grep(qr/\.txt$/)->each;
+my %attachments;
 
 for my $file (@files) {
     my $basename = decode( 'utf-8', $file->basename('.txt') );
@@ -38,23 +40,12 @@ get '/projects/foo/wiki/:title/:version', [ format => ['json'] ] => sub {
     my $c    = shift;
     my $page = $pages{ $c->stash('title') };
     if ($page) {
-        $c->render( json => { wiki_page => $page->[ $c->stash('version') ] } );
+        $c->render(
+            json => { wiki_page => $page->[ $c->stash('version') - 1 ] } );
     }
     else {
         $c->render( status => 404, text => '' );
     }
-};
-get '/dump/:title', [ format => ['json'] ] => sub ($c) {
-    $c->render(
-        json => {
-            wiki_pages => {
-                map {
-                    $_ => [ map { my $x = {%$_}; delete $x->{api}; $x }
-                          @{ $pages{$_} } ]
-                } keys %pages
-            }
-        }
-    );
 };
 
 get '/projects/foo/wiki/:title', [ format => ['json'] ] => sub {
@@ -69,10 +60,11 @@ get '/projects/foo/wiki/:title', [ format => ['json'] ] => sub {
 };
 
 put '/projects/foo/wiki/:title', [ format => ['json'] ] => sub {
-    my $c        = shift;
-    my $title    = $c->stash('title');
-    my $text     = $c->req->json->{wiki_page}->{text};
-    my $comments = $c->req->json->{wiki_page}->{comments} || '';
+    my $c           = shift;
+    my $title       = $c->stash('title');
+    my $text        = $c->req->json->{wiki_page}->{text};
+    my $comments    = $c->req->json->{wiki_page}->{comments} || '';
+    my $attachments = $c->req->json->{wiki_page}->{uploads}  || [];
     my ( $uid, $name ) = ( getpwuid($<) )[ 2, 6 ];
     my $author = { id => $uid, name => $name };
 
@@ -90,6 +82,9 @@ put '/projects/foo/wiki/:title', [ format => ['json'] ] => sub {
         $new_page->{updated_on} = $time;
         $new_page->{author}     = $author;
         $new_page->{comments}   = $comments;
+        $new_page->{attachments} =
+          [ @{ $new_page->{attachments} }, @$attachments ];
+
         $new_page->{version}++;
 
         push @{ $pages{$title} }, $new_page;
@@ -106,7 +101,7 @@ put '/projects/foo/wiki/:title', [ format => ['json'] ] => sub {
             created_on  => $time,
             updated_on  => $time,
             version     => 1,
-            attachments => [],
+            attachments => $attachments,
           };
         $c->render( status => 201, text => '' );
     }
@@ -116,6 +111,17 @@ del '/projects/foo/wiki/#title', [ format => ['json'] ] => sub {
     my $c = shift;
     delete $pages{ $c->stash('title') };
     $c->render( status => 204, text => '' );
+};
+
+post '/uploads', [ format => ['json'] ] => sub ($c) {
+    if ( $c->req->headers->content_type ne 'application/octet-stream' ) {
+        return $c->render( status => '406', text => 'Not Acceptable' );
+    }
+    my $content = $c->req->body;
+    my $token   = sha1_hex($content);
+    $attachments{$token} = $content;
+    $c->res->code(201);
+    $c->render( json => { upload => { token => sha1_hex } } );
 };
 
 get '/projects/foo/search', [ format => ['json'] ] => sub {

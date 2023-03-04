@@ -61,6 +61,7 @@ sub attach_files ( $self, $title, @files ) {
     }
     while (1) {
         my $page = $self->page($title);
+        my $url  = $self->base_url->clone->path("wiki/$title.json");
         my $res  = $self->ua->put(
             $url => json => {
                 wiki_page => {

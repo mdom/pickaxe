@@ -26,11 +26,11 @@ has extended => sub ($self) {
     return App::pickaxe::Page::Extended->new;
 };
 
-has parent      => sub { shift->extended->parent };
-has comments    => sub { shift->extended->comments };
-has author      => sub { shift->extended->author };
-has text        => sub { shift->extended->text };
-has attachments => sub { shift->extended->attachments };
+sub parent      { shift->extended->parent }
+sub comments    { shift->extended->comments }
+sub author      { shift->extended->author }
+sub text        { shift->extended->text }
+sub attachments { shift->extended->attachments }
 
 has url => sub ($self) {
     my $url = $self->api->base_url->clone->path( "wiki/" . $self->title );
@@ -62,9 +62,7 @@ has rendered_text => sub ($self) {
     my @table;
     my $pre_mode = 0;
     my @lines;
-    use Data::Dumper;
 
-    # if ($self->version == 235 ) { die Dumper [ split("\n",  $text ) ] };
     for my $line ( split( "\n", $text ) ) {
         if ( $line =~ /<pre>/ ) {
             $pre_mode = 1;

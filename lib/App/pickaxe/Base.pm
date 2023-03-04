@@ -28,6 +28,13 @@ sub open_in_browser ( $self, $key ) {
     IPC::Cmd::run( command => [ 'xdg-open', $self->pages->current->url ] );
 }
 
+sub add_attachment ( $self, $key ) {
+    my $filename = getline("File to attach: ");
+    return if !$filename;
+    return if !-f $filename;
+    $self->api->attach_files( $self->pages->current->title, $filename );
+}
+
 sub follow_links ( $self, $key ) {
     my $re = qr{
     ## textile links
