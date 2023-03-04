@@ -5,6 +5,7 @@ use App::pickaxe::Getline 'getline';
 use App::pickaxe::Keys 'getkey';
 use App::pickaxe::Pager;
 use App::pickaxe::Pages;
+use App::pickaxe::Format;
 
 use Curses;
 
@@ -30,44 +31,9 @@ sub format_time ( $self, $time ) {
     strftime( $strftime_fmt, $sec, $min, $hour, $mday, $mon, $year );
 }
 
-sub compile_index_format ($self) {
-    my $index_fmt = $self->config->index_format;
-
-    my $fmt = '';
-    my @args;
-
-    my %identifier = (
-        t => sub { my $t = $_[0]->{title}; $t =~ s/_/ /g; $t },
-        u => sub { $self->format_time( $_[0]->{'updated_on'} ) },
-        c => sub { $self->format_time( $_[0]->{'created_on'} ) },
-        v => sub { $_[0]->{version} },
-    );
-
-    while (1) {
-        if ( $index_fmt =~ /\G%(-?\d+(?:.\d)?)?([a-zA-Z])/gc ) {
-            my ( $mod, $format ) = ( $1, $2 );
-            $mod //= '';
-            if ( my $i = $identifier{$format} ) {
-                $fmt .= "%${mod}s";
-                push @args, $i;
-            }
-            else {
-                die "Unknown format specifier <$format>\n";
-            }
-        }
-        elsif ( $index_fmt =~ /\G([^%]+)/gc ) {
-            $fmt .= $1;
-        }
-        elsif ( $index_fmt =~ /\G$/gc ) {
-            last;
-        }
-    }
-    return $fmt, @args;
-}
-
 sub view_page ( $self, $key ) {
     return if $self->empty;
-    $self->pages->unsubscribe( 'changed' );
+    $self->pages->unsubscribe('changed');
     App::pickaxe::Pager->new(
         config => $self->config,
         pages  => $self->pages,
@@ -81,14 +47,17 @@ sub view_page ( $self, $key ) {
 }
 
 sub regenerate_index ($self) {
-    my ( $fmt, @args ) = $self->compile_index_format;
-    my @lines;
-    my $x = 1;
-    for my $page ( $self->pages->each ) {
-        $page->{index} = $x++;
-        push @lines, sprintf( $fmt, map { $_->($page) } @args );
-    }
-    $self->set_lines(@lines);
+    my $fmt = App::pickaxe::Format->new(
+        format     => $self->config->index_format,
+        identifier => {
+            t => sub { $_[0]->title =~ s/_/ /gr },
+            u => sub { $self->format_time( $_[0]->updated_on ) },
+            c => sub { $self->format_time( $_[0]->created_on ) },
+            v => sub { $_[0]->version },
+        },
+    );
+
+    $self->set_lines( map { $fmt->printf($_) } $self->pages->each );
     $self->goto_line( $self->pages->index );
 }
 
