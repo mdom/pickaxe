@@ -18,6 +18,10 @@ our $VERSION = '0.01';
 ## Config can write to stderr
 my $config = App::pickaxe::Config->new;
 
+if (@ARGV) {
+    $config->base_url( shift @ARGV );
+}
+
 if ( !$config->base_url ) {
     die "Usage: $0 BASE_URL\n";
 }

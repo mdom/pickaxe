@@ -8,6 +8,7 @@ use Curses;
 has 'username';
 has 'password';
 has 'apikey';
+has 'base_url';
 
 has pass_cmd    => sub { [] };
 has yank_cmd    => sub { ['xclip'] };
@@ -63,7 +64,6 @@ has keybindings => sub {
 
 has index_time_format => "%Y-%m-%d %H:%M:%S";
 has index_format      => '%-22u %t';
-has base_url => sub { shift @ARGV };
 
 sub new ($class) {
     my $file = ( $ENV{XDG_CONFIG_HOME} || "$ENV{HOME}/.config" )
