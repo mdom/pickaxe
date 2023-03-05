@@ -121,6 +121,7 @@ sub run ($self) {
     $self->query_connection_details;
 
     $self->pages->on( changed => sub { $self->regenerate_index } );
+    $self->on( resize => sub { $self->regenerate_index } );
     $self->on( change_line =>
           sub ($self) { $self->pages->set_index( $self->current_line ) } );
 

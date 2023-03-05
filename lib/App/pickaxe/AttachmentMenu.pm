@@ -45,8 +45,22 @@ sub run ( $self, $bindings ) {
             s => sub { format_size( $_[0]->filesize || 0 ) },
         },
     );
-    $self->set_lines( map { $fmt->printf($_) } @{ $self->attachments } );
+
+    $self->on( resize => sub { $self->update_lines } );
+    $self->update_lines;
     $self->next::method($bindings);
+}
+
+sub update_lines ($self) {
+    my $fmt = App::pickaxe::Format->new(
+        format     => $self->config->attach_format,
+        identifier => {
+            f => sub { $_[0]->filename },
+            t => sub { $_[0]->content_type || 'application/octetstream' },
+            s => sub { format_size( $_[0]->filesize || 0 ) },
+        },
+    );
+    $self->set_lines( map { $fmt->printf($_) } @{ $self->attachments } );
 }
 
 sub format_size ($size) {

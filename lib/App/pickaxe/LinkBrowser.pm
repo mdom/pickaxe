@@ -26,9 +26,20 @@ sub follow_link ( $self, $key ) {
     IPC::Cmd::run( command => [ 'xdg-open', $link ] );
 }
 
-sub run ( $self ) {
-    $self->set_lines( @{ $self->links } );
-    $self->next::method($self->config->keybindings);
+sub run ($self) {
+    $self->on( resize => sub { $self->update_lines } );
+    $self->update_lines;
+    $self->next::method( $self->config->keybindings );
+}
+
+sub update_lines ($self) {
+    my $fmt = App::pickaxe::Format->new(
+        format     => $self->config->link_format,
+        identifier => {
+            l => sub { $_[0] },
+        },
+    );
+    $self->set_lines( map { $fmt->printf($_) } @{ $self->links } );
 }
 
 1;

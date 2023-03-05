@@ -275,6 +275,7 @@ sub run ( $self, $keybindings = {} ) {
         my $key = getkey;
         next if !$key;
         if ( $key eq '<Resize>' ) {
+            $self->emit('resize');
             $self->render;
             next;
         }
