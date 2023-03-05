@@ -64,6 +64,7 @@ has keybindings => sub {
 
 has index_time_format => "%Y-%m-%d %H:%M:%S";
 has index_format      => '%-22u %t';
+has attach_format     => '%f %> [%t %5s]';
 
 sub new ($class) {
     my $file = ( $ENV{XDG_CONFIG_HOME} || "$ENV{HOME}/.config" )

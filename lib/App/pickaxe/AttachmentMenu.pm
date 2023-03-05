@@ -10,7 +10,7 @@ has helpbar     => "q:Quit";
 has statusbar   => "pickaxe: Attachments";
 has attachments => sub { [] };
 has 'api';
-has 'format' => '(%5s) %f';
+has 'config';
 
 sub save_attachment ( $self, $key ) {
     my $attachment = $self->attachments->[ $self->current_line ];
@@ -38,7 +38,7 @@ sub view_attachment ( $self, $key ) {
 
 sub run ( $self, $bindings ) {
     my $fmt = App::pickaxe::Format->new(
-        format     => $self->format,
+        format     => $self->config->attach_format,
         identifier => {
             f => sub { $_[0]->filename },
             t => sub { $_[0]->content_type || 'application/octetstream' },

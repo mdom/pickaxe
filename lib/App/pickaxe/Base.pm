@@ -60,6 +60,7 @@ sub view_attachments ( $self, $key ) {
     my $menu = App::pickaxe::AttachmentMenu->new(
         attachments => $self->pages->current->attachments,
         api         => $self->api,
+        config      => $self->config,
     );
     $menu->run( $self->config->keybindings );
 }
