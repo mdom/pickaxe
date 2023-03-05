@@ -22,8 +22,8 @@ has _format => sub ($self) {
                 die "Unknown format specifier <$format>\n";
             }
         }
-        elsif ( $format =~ /\G%>(.)/gc ) {
-            $printf_fmt .= "%%>$1";
+        elsif ( $format =~ /\G%([>*].)/gc ) {
+            $printf_fmt .= "%%$1";
         }
         elsif ( $format =~ /\G([^%]+)/gc ) {
             $printf_fmt .= $1;
@@ -34,8 +34,15 @@ has _format => sub ($self) {
 
 sub printf ( $self, $o ) {
     my ( $fmt, @subs ) = @{ $self->_format };
-    my $result = sprintf( $fmt, map { $_->($o) } @subs );
-    $result =~ s/%>(.)/$1 x ($COLS - length($result) - 3)/ge;
+    my $result   = sprintf( $fmt, map { $_->($o) } @subs );
+    my $pad_size = ( $COLS - length($result) - 2 );
+    if ( $pad_size < 0 ) {
+        $pad_size = 0;
+    }
+    $result =~
+      s{^(.*?)%>(.)(.*)$}{substr($1 . ($2 x $pad_size) . $3, 0, $COLS)}ge;
+    $result =~ s{^(.*?)%\*(.)(.*)$}
+         {substr($1 . ($2 x $pad_size), 0, $COLS - length($3)) . $3}ge;
     return $result;
 }
 
