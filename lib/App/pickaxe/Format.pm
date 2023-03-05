@@ -4,6 +4,7 @@ use Curses;
 
 has identifier => sub { {} };
 has format     => '';
+has 'cols';
 
 has _format => sub ($self) {
     my $format     = $self->format;
@@ -34,15 +35,37 @@ has _format => sub ($self) {
 
 sub printf ( $self, $o ) {
     my ( $fmt, @subs ) = @{ $self->_format };
-    my $result   = sprintf( $fmt, map { $_->($o) } @subs );
-    my $pad_size = ( $COLS - length($result) - 2 );
-    if ( $pad_size < 0 ) {
-        $pad_size = 0;
+    my $cols = $self->cols || $COLS;
+
+    my $result = sprintf( $fmt, map { $_->($o) } @subs );
+
+    if ( $result =~ /^(.*?)%>(.)(.*)$/ ) {
+        my ( $l1, $l3 ) = ( length($1), length($3) );
+        if ( $l1 >= $cols ) {
+            $result = substr( $1, 0, $cols );
+        }
+        elsif ( $l1 + $l3 > $cols ) {
+            $result = substr( $1 . $3, 0, $cols );
+        }
+        else {
+            $result = $1 . ( $2 x ( $cols - $l1 - $l3 ) ) . $3;
+        }
     }
-    $result =~
-      s{^(.*?)%>(.)(.*)$}{substr($1 . ($2 x $pad_size) . $3, 0, $COLS)}ge;
-    $result =~ s{^(.*?)%\*(.)(.*)$}
-         {substr($1 . ($2 x $pad_size), 0, $COLS - length($3)) . $3}ge;
+    elsif ( $result =~ /^(.*?)%\*(.)(.*)$/ ) {
+        my ( $l1, $l3 ) = ( length($1), length($3) );
+        if ( $l3 >= $cols ) {
+            $result = substr( $3, 0, $cols );
+        }
+        elsif ( $l1 + $l3 > $cols ) {
+            $result = substr( $1, 0, $cols - $l3 ) . $3;
+        }
+        else {
+            $result = $1 . ( $2 x ( $cols - $l1 - $l3 ) ) . $3;
+        }
+    }
+    else {
+        $result = substr( $result, 0, $cols );
+    }
     return $result;
 }
 
