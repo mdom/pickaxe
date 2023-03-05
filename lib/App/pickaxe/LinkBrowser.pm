@@ -3,8 +3,8 @@ use Mojo::Base 'App::pickaxe::UI::Index', -signatures;
 
 has [ 'links', 'api', 'config' ];
 
-has helpbar    => "q:Quit";
-has statusbar  => "pickaxe: Link Browser";
+has helpbar   => "q:Quit";
+has statusbar => "pickaxe: Link Browser";
 
 sub follow_link ( $self, $key ) {
     my $link = $self->links->[ $self->current_line ];
@@ -37,6 +37,7 @@ sub update_lines ($self) {
         format     => $self->config->link_format,
         identifier => {
             l => sub { $_[0] },
+            n => sub { state $i = 1; $i++ },
         },
     );
     $self->set_lines( map { $fmt->printf($_) } @{ $self->links } );

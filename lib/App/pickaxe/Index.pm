@@ -54,6 +54,7 @@ sub regenerate_index ($self) {
             u => sub { $self->format_time( $_[0]->updated_on ) },
             c => sub { $self->format_time( $_[0]->created_on ) },
             v => sub { $_[0]->version },
+            n => sub { state $i = 1; $i++ },
         },
     );
 

@@ -43,6 +43,7 @@ sub run ( $self, $bindings ) {
             f => sub { $_[0]->filename },
             t => sub { $_[0]->content_type || 'application/octetstream' },
             s => sub { format_size( $_[0]->filesize || 0 ) },
+            n => sub { state $i = 1; $i++ },
         },
     );
 
@@ -58,6 +59,7 @@ sub update_lines ($self) {
             f => sub { $_[0]->filename },
             t => sub { $_[0]->content_type || 'application/octetstream' },
             s => sub { format_size( $_[0]->filesize || 0 ) },
+            n => sub { state $i = 1; $i++ },
         },
     );
     $self->set_lines( map { $fmt->printf($_) } @{ $self->attachments } );
