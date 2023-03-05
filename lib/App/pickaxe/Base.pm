@@ -61,6 +61,7 @@ sub view_attachments ( $self, $key ) {
         attachments => $self->pages->current->attachments,
         api         => $self->api,
         config      => $self->config,
+        pages       => $self->pages,
     );
     $menu->run( $self->config->keybindings );
 }

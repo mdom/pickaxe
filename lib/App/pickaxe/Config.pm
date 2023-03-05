@@ -20,6 +20,7 @@ has keybindings => sub {
         attachment_menu => {
             's'        => 'save_attachment',
             '<Return>' => 'view_attachment',
+            A          => 'add_attachment',
         },
         index => {
             e          => 'edit_page',
@@ -64,7 +65,7 @@ has keybindings => sub {
 
 has index_time_format => "%Y-%m-%d %H:%M:%S";
 has index_format      => '%4n %-22u %t';
-has attach_format     => '%4n %f %*  [%t %5s]';
+has attach_format     => '%4n %f %>  [%t %5s]';
 has link_format       => '%4n %l';
 
 sub new ($class) {

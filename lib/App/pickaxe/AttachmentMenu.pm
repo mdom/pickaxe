@@ -11,6 +11,7 @@ has statusbar   => "pickaxe: Attachments";
 has attachments => sub { [] };
 has 'api';
 has 'config';
+has 'pages';
 
 sub save_attachment ( $self, $key ) {
     my $attachment = $self->attachments->[ $self->current_line ];
@@ -18,6 +19,17 @@ sub save_attachment ( $self, $key ) {
     my $file = getline( "Save to file: ", { buffer => $attachment->filename } );
     return if !$file;
     $self->api->get($path)->save_to($file);
+}
+
+sub add_attachment ( $self, $key ) {
+    my $filename = getline("File to attach: ");
+    return if !$filename;
+    return if !-f $filename;
+    my $title = $self->pages->current->title;
+    $self->api->attach_files( $title, $filename );
+    $self->pages->replace_current( $self->api->page($title) );
+    $self->attachments( $self->pages->current->attachments );
+    $self->update_lines;
 }
 
 sub delete_attachment ( $self, $key ) {
