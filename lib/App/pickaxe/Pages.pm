@@ -14,7 +14,7 @@ sub sort ( $self, $order ) {
 sub switch_to ( $self, $elt ) {
     return if !$elt;
     for ( my $i = 0 ; $i < @{ $self->array } ; $i++ ) {
-        if ( $elt->{title} eq $self->array->[$i]->{title} ) {
+        if ( $elt->title eq $self->array->[$i]->title ) {
             $self->index($i);
             return 1;
         }
