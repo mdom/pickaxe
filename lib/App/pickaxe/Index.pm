@@ -128,6 +128,11 @@ sub run ($self) {
 
     $self->update_pages;
 
+    if ( my $title = $self->api->start_page ) {
+        $self->pages->switch_to( $self->api->page($title) );
+        $self->view_page(undef);
+    }
+
     $self->next::method( $self->config->keybindings );
 }
 

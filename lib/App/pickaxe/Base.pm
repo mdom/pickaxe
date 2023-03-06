@@ -18,8 +18,7 @@ has 'config';
 has 'pages' => sub { App::pickaxe::Pages->new };
 
 has api => sub {
-    App::pickaxe::Api->new(
-        base_url => Mojo::URL->new( shift->config->base_url ) );
+    App::pickaxe::Api->new( url => Mojo::URL->new( shift->config->base_url ) );
 };
 
 sub open_in_browser ( $self, $key ) {

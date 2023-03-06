@@ -5,8 +5,27 @@ use Mojo::UserAgent;
 use App::pickaxe::Page;
 use Mojo::File 'path';
 
-has base_url => sub {
-    die "App::pickaxe::Api->base_url undefined.";
+has 'url';
+
+sub start_page ($self) {
+    if ( $self->url->path =~ m{^/projects/.+?/wiki/(.+)} ) {
+        return $1;
+    }
+    return;
+}
+
+sub project ($self) {
+    if ( $self->url->path =~ m{^/projects/(.*?)/} ) {
+        return $1;
+    }
+    return;
+}
+
+has base_url => sub ($self) {
+    if ( $self->url->path =~ m{^(/projects/.+?/)} ) {
+        return $self->url->clone->path($1);
+    }
+    return;
 };
 
 has ua    => sub { Mojo::UserAgent->new };
