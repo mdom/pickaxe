@@ -1,9 +1,6 @@
 #!/usr/bin/perl
 
-# TODO Caching in API
 # TODO threaded with parents in index?
-# TODO History
-# TODO Attachments
 
 use Mojo::Base -strict, -signatures;
 use Mojo::UserAgent;
