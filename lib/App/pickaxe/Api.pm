@@ -22,8 +22,8 @@ sub project ($self) {
 }
 
 has base_url => sub ($self) {
-    if ( $self->url->path =~ m{^(/projects/.+?/)} ) {
-        return $self->url->clone->path($1);
+    if ( $self->url->path =~ m{^(/projects/[^/]+)} ) {
+        return $self->url->clone->path("$1/");
     }
     return;
 };
