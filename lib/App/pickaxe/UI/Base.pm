@@ -8,6 +8,7 @@ use Mojo::Util 'decamelize';
 has 'lines'   => sub { [] };
 has 'message' => '';
 has 'matches';
+has 'exit';
 
 has nlines         => 0;
 has ncolumns       => 0;
@@ -261,8 +262,6 @@ sub display_help ( $self, $key ) {
 
 has current_keybindings => sub { {} };
 
-has exit_after_call => 0;
-
 sub run ( $self, $keybindings = {} ) {
     $self->current_keybindings(
         {
@@ -291,14 +290,12 @@ sub run ( $self, $keybindings = {} ) {
         }
         else {
             $self->$funcname($key);
-            if ( $self->exit_after_call ) {
-                $self->exit_after_call(0);
-                last;
-            }
+            last if $self->exit;
         }
         $self->render;
         refresh;
     }
+    return;
 }
 
 sub empty ($self) {

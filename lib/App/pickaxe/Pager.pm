@@ -45,8 +45,8 @@ sub run ($self) {
 
 sub delete_page ( $self, $key ) {
     $self->next::method($key);
-    if ($self->pages->empty ) {
-        $self->exit_after_call(1);
+    if ( $self->pages->empty ) {
+        $self->exit(1);
     }
 }
 
