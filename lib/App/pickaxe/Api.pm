@@ -14,22 +14,28 @@ sub start_page ($self) {
     return;
 }
 
-sub project ($self) {
+has project => sub ($self) {
     if ( $self->url->path =~ m{^/projects/(.*?)/} ) {
         return $1;
     }
     return;
-}
+};
 
 has base_url => sub ($self) {
     if ( $self->url->path =~ m{^(/projects/[^/]+)} ) {
         return $self->url->clone->path("$1/");
     }
-    return;
+    return $self->url;
 };
 
 has ua    => sub { Mojo::UserAgent->new };
 has cache => sub { {} };
+
+sub switch_project ( $self, $project ) {
+    $self->base_url->path("/projects/$project/");
+    $self->project($project);
+    $self->cache( {} );
+}
 
 sub get ( $self, $path, %parameters ) {
     my $url = $self->base_url->clone->path($path);

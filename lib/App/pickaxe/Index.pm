@@ -6,6 +6,7 @@ use App::pickaxe::Keys 'getkey';
 use App::pickaxe::Pager;
 use App::pickaxe::Pages;
 use App::pickaxe::Format;
+use App::pickaxe::ProjectMenu;
 
 use Curses;
 
@@ -85,32 +86,16 @@ sub search ( $self, $key ) {
 }
 
 sub switch_project ( $self, $key ) {
-    my %projects = map { $_ => 1 } @{ $self->api->projects };
-    state $history = [];
-    my $project = getline(
-        'Open project: ',
-        {
-            history            => $history,
-            completion_matches => sub ($word) {
-                $word ||= '';
-                my @completions;
-                for my $project ( keys %projects ) {
-                    if ( index( $project, $word ) == 0 ) {
-                        push @completions, $project;
-                    }
-                }
-                return @completions;
-            }
-        }
+    my $switcher = App::pickaxe::ProjectMenu->new(
+        config => $self->config,
+        api    => $self->api
     );
-    return if !$project;
-    if ( !exists $projects{$project} ) {
-        $self->message("$project is not a project.");
-        return;
+    $switcher->run( $self->config->keybindings );
+    if ( my $project = $switcher->selected_project ) {
+        $self->api->switch_project($project);
+        $self->update_pages;
     }
-
-    $self->api->base_url->path("/projects/$project/");
-    $self->update_pages;
+    return;
 }
 
 sub sync_pages ( $self, $key ) {
@@ -120,6 +105,20 @@ sub sync_pages ( $self, $key ) {
 
 sub run ($self) {
     $self->query_connection_details;
+
+    if ( !$self->api->project ) {
+        my $switcher = App::pickaxe::ProjectMenu->new(
+            config => $self->config,
+            api    => $self->api
+        );
+        $switcher->run( $self->config->keybindings );
+        if ( my $project = $switcher->selected_project ) {
+            $self->api->switch_project($project);
+        }
+        else {
+            return;
+        }
+    }
 
     $self->pages->on( changed => sub { $self->regenerate_index } );
     $self->on( resize => sub { $self->regenerate_index } );

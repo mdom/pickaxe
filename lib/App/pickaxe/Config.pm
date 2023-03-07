@@ -14,6 +14,9 @@ has pass_cmd    => sub { [] };
 has yank_cmd    => sub { ['xclip'] };
 has keybindings => sub {
     return {
+        project_menu => {
+            '<Return>' => 'select_project',
+        },
         link_browser => {
             '<Return>' => 'follow_link',
         },
@@ -67,6 +70,7 @@ has keybindings => sub {
 has index_time_format => "%Y-%m-%d %H:%M:%S";
 has index_format      => '%4n %-22u %t';
 has attach_format     => '%4n %f %>  [%t %5s]';
+has project_format    => '%4n %p';
 has link_format       => '%4n %l';
 
 sub new ($class) {
