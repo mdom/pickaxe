@@ -142,7 +142,7 @@ sub projects ($self) {
         "/projects.json",
         include => 'enabled_modules',
         limit   => 100,
-        offset  => 0
+        offset  => 0,
     );
     return if !$res->is_success;
     my $data     = $res->json;
@@ -186,7 +186,7 @@ sub _search ( $self, $query, $offset = 0 ) {
         q          => $query,
         wiki_pages => 1,
         limit      => 100,
-        offset     => 0
+        offset     => $offset,
     );
     return if !$res->is_success;
     return $res->json;
