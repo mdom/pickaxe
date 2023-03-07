@@ -47,6 +47,10 @@ sub get ( $self, $path, %parameters ) {
     if ( $res->code == 401 ) {
         die "Authentication failed.\n";
     }
+    if ( $res->is_error ) {
+        $url->query->pairs( [] );
+        die "$url: " . $res->message . ".\n";
+    }
     return $res;
 }
 
