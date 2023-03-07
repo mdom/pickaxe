@@ -15,7 +15,7 @@ sub start_page ($self) {
 }
 
 has project => sub ($self) {
-    if ( $self->url->path =~ m{^/projects/(.*?)/} ) {
+    if ( $self->url->path =~ m{^/projects/([^/]+)} ) {
         return $1;
     }
     return;
