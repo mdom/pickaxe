@@ -15,7 +15,6 @@ sub keybindings ($self) {
         '<Left>'     => 'prev_page',
         '<Right>'    => 'next_screen',
         '<Space>'    => 'next_screen',
-        s            => 'search',
         '/'          => 'find',
         '<Esc>/'     => 'find_reverse',
         'n'          => 'find_next',

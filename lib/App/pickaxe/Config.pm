@@ -36,6 +36,7 @@ has keybindings => sub {
             y          => 'yank_url',
             v          => 'view_attachments',
             f          => 'follow_links',
+            s          => 'search',
             '<Return>' => 'view_page',
             '?'        => 'display_help',
         },
