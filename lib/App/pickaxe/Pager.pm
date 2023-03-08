@@ -13,6 +13,11 @@ sub prev_item ( $self, $key ) {
     $self->pages->prev;
 }
 
+sub diff_page ( $self, $key ) {
+    my $version = $self->version;
+    $self->next::method( $version - 1, $version );
+}
+
 sub statusbar ($self) {
     my $base = $self->api->base_url->clone->query( key => undef );
     my $page = $self->api->page( $self->pages->current->title, $self->version );

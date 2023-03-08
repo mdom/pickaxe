@@ -20,6 +20,11 @@ sub statusbar ($self) {
     return "pickaxe: $base";
 }
 
+sub diff_page ( $self, $key ) {
+    my $version = $self->pages->current->version;
+    $self->next::method( $version - 1, $version );
+}
+
 sub format_time ( $self, $time ) {
     my $strftime_fmt = $self->config->index_time_format;
     my $redmine_fmt  = '%Y-%m-%dT%H:%M:%SZ';

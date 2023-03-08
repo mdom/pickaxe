@@ -308,16 +308,14 @@ sub diff ( $old_text, $new_text ) {
     return join( '', @diff[ 2 .. $#diff ] );
 }
 
-sub diff_page ( $self, $key ) {
-    ## TODO diff last_version in pager!
-    my $page = $self->pages->current;
-    if ( $page->{version} == 1 ) {
+sub diff_page ( $self, $old_version, $new_version ) {
+    my $title = $self->pages->current->title;
+    if ( $new_version == 1 ) {
         $self->message('No previous version to diff against');
         return;
     }
-    my $version  = $page->version - 1;
-    my $old_text = $self->api->page( $page->title, $version )->rendered_text;
-    my $new_text = $page->rendered_text;
+    my $old_text = $self->api->page( $title, $old_version )->rendered_text;
+    my $new_text = $self->api->page( $title, $new_version )->rendered_text;
 
     my $diff = diff( $old_text, $new_text );
     if ( !$diff ) {
