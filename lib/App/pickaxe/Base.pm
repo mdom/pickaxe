@@ -319,8 +319,12 @@ sub diff_page ( $self, $key ) {
     my $old_text = $self->api->page( $page->title, $version )->rendered_text;
     my $new_text = $page->rendered_text;
 
-    ## TODO Use other keybindings!
-    App::pickaxe::UI::Pager->new->set_text( diff( $old_text, $new_text ) )
+    my $diff = diff( $old_text, $new_text );
+    if ( !$diff ) {
+        $self->message("No text changed between $old_version and $new_version");
+        return;
+    }
+    App::pickaxe::UI::Pager->new->set_text($diff)
       ->run( $self->config->keybindings );
     return;
 }
