@@ -23,7 +23,9 @@ has keybindings => sub {
         attachment_menu => {
             's'        => 'save_attachment',
             '<Return>' => 'view_attachment',
+            a          => 'add_attachment',
             A          => 'add_attachment',
+            D          => 'delete_attachment',
         },
         index => {
             e          => 'edit_page',

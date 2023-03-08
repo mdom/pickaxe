@@ -5,8 +5,9 @@ use Curses 'refresh';
 use Mojo::URL;
 use App::pickaxe::Getline 'getline';
 use App::pickaxe::Format;
+use App::pickaxe::SelectOption 'askyesno';
 
-has helpbar     => "q:Quit";
+has helpbar     => "q:Quit s:Save <Ret>:View a:Add D:Delete";
 has statusbar   => "pickaxe: Attachments";
 has attachments => sub { [] };
 has 'api';
@@ -33,15 +34,30 @@ sub add_attachment ( $self, $key ) {
 }
 
 sub delete_attachment ( $self, $key ) {
-    ...;
+    if ( !askyesno("Delete attachment?") ) {
+        return;
+    }
+    my $err = $self->api->delete_attachment( $self->current_attachment->id );
+    if ($err) {
+        $self->message("Can't delete attachment: $err");
+        return;
+    }
+    my $title = $self->pages->current->title;
+    $self->pages->replace_current( $self->api->page($title) );
+    $self->attachments( $self->pages->current->attachments );
+    my $current_line = $self->current_line;
+    $self->update_lines;
+    $self->goto_line($current_line);
+}
+
+sub current_attachment ($self) {
+    $self->attachments->[ $self->current_line ];
 }
 
 sub view_attachment ( $self, $key ) {
     return if !@{ $self->attachments };
     my $file = tempfile;
-    my $path =
-      Mojo::URL->new( $self->attachments->[ $self->current_line ]->content_url )
-      ->path;
+    my $path = Mojo::URL->new( $self->current_attachment->content_url )->path;
     $self->api->get($path)->save_to( $file->to_string );
     use IPC::Cmd;
     IPC::Cmd::run( command => [ 'xdg-open', $file ] );

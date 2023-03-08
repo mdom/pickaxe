@@ -114,6 +114,15 @@ sub attach_files ( $self, $title, @files ) {
     }
 }
 
+sub delete_attachment ( $self, $id ) {
+    my $url = $self->base_url->clone->path("/attachments/$id.json");
+    my $res = $self->ua->delete($url)->result;
+    if ( !$res->is_success ) {
+        return $res->message;
+    }
+    return;
+}
+
 sub delete ( $self, $title ) {
     my $url = $self->base_url->clone->path("wiki/$title.json");
     my $res = $self->ua->delete($url)->result;
