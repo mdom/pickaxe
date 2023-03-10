@@ -140,11 +140,6 @@ sub pages ($self) {
         my $title = $page->title;
         $self->cache->{$title}->[ $page->version ] = $page;
     }
-    for my $page ( map { $_->[-1] } values $self->cache->%* ) {
-        if ( $page->parent ) {
-            push @{ $self->cache->{ $page->parent }->[-1]->childs }, $page;
-        }
-    }
     return [ map { $_->[-1] } values $self->cache->%* ];
 }
 
@@ -155,6 +150,7 @@ sub page ( $self, $title, $version = undef ) {
         if ( $res->is_success ) {
             my $page = $res->json->{wiki_page};
             $page->{text} =~ s/\r//g;
+            $page->{parent} = $page->{parent}->{title} // undef;
             $self->cache->{$title}->[ $page->{version} ] =
               App::pickaxe::Page->new($page)->api($self);
         }

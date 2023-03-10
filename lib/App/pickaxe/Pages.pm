@@ -57,6 +57,14 @@ sub set ( $self, $pages ) {
     my $order = $self->order =~ s/^reverse_//r;
 
     if ( $self->threaded ) {
+        ## recompute all childs before threading
+        $_->childs([]) for @$pages;
+        my %pages = map { $_->title => $_ } @$pages;
+        for my $page ( @$pages ) {
+            if ($page->parent ) {
+                push @{ $pages{ $page->parent }->childs}, $page;
+            }
+        }
         $pages = [ thread_sort( grep { !$_->parent } @$pages ) ];
     }
     else {
