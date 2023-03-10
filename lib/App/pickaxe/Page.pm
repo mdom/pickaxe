@@ -106,16 +106,6 @@ has rendered_text => sub ($self) {
 
 };
 
-has level => sub ($self) {
-    my $i = 0;
-    my $page = $self->parent_page;
-    while ( defined $page ) {
-        $i++;
-        $page = $page->parent_page;
-    }
-    return $i;
-};
-
 1;
 
 package App::pickaxe::Page::Extended;

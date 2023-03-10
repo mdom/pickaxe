@@ -11,6 +11,28 @@ sub sort ( $self, $order ) {
     $self->set( $self->array );
 }
 
+sub threading ($self) {
+    my %pages;
+    my @top_level;
+    for my $page ( $self->each ) {
+        my $parent = $page->parent;
+        if ( !$parent ) {
+            push @top_level, $page->title;
+        }
+        else {
+            push @{ $pages{ $parent->{title} } }, $page->title;
+        }
+    }
+    for my $children ( values %pages ) {
+        for my $child (@$children) {
+            if ( $pages{$child} ) {
+                $child = [ $child => $pages{$child} ];
+            }
+        }
+    }
+    return map { $pages{$_} ? [ $_ => $pages{$_} ] : $_ } @top_level;
+}
+
 sub switch_to ( $self, $elt ) {
     return if !$elt;
     for ( my $i = 0 ; $i < @{ $self->array } ; $i++ ) {
