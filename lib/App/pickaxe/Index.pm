@@ -12,6 +12,8 @@ use Curses;
 
 use POSIX 'strftime';
 
+has threaded => 0;
+
 has helpbar =>
   "q:Quit a:Add e:Edit s:Search /:Find b:Browse o:Order D:Delete ?:Help";
 
@@ -57,7 +59,7 @@ sub regenerate_index ($self) {
         format     => $self->config->index_format,
         identifier => {
             t => sub { $_[0]->title =~ s/_/ /gr },
-            l => sub { ' ' x $_[0]->level },
+            l => sub { $self->threaded ? ( '-' x ( $_[0]->level * 2 ) ) : '' },
             u => sub { $self->format_time( $_[0]->updated_on ) },
             c => sub { $self->format_time( $_[0]->created_on ) },
             v => sub { $_[0]->version },

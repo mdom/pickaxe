@@ -1,36 +1,15 @@
 package App::pickaxe::Pages;
 use Mojo::Base 'Mojo::EventEmitter', -signatures;
 
-has index => 0;
-has array => sub { [] };
+has index    => 0;
+has threaded => 0;
+has array    => sub { [] };
 
 has 'order' => 'reverse_updated_on';
 
 sub sort ( $self, $order ) {
     $self->order($order);
     $self->set( $self->array );
-}
-
-sub threading ($self) {
-    my %pages;
-    my @top_level;
-    for my $page ( $self->each ) {
-        my $parent = $page->parent;
-        if ( !$parent ) {
-            push @top_level, $page->title;
-        }
-        else {
-            push @{ $pages{ $parent->{title} } }, $page->title;
-        }
-    }
-    for my $children ( values %pages ) {
-        for my $child (@$children) {
-            if ( $pages{$child} ) {
-                $child = [ $child => $pages{$child} ];
-            }
-        }
-    }
-    return map { $pages{$_} ? [ $_ => $pages{$_} ] : $_ } @top_level;
 }
 
 sub switch_to ( $self, $elt ) {
@@ -66,16 +45,26 @@ sub replace_current ( $self, $page ) {
     $self->set( $self->array );
 }
 
+sub thread_sort (@pages) {
+    map { $_, thread_sort( $_->childs->@* ) }
+      sort { $a->title cmp $b->title } @pages;
+}
+
 sub set ( $self, $pages ) {
 
     my $current = $self->current;
 
     my $order = $self->order =~ s/^reverse_//r;
 
-    $pages = [ sort { $a->{$order} cmp $b->{$order} } @$pages ];
+    if ( $self->threaded ) {
+        $pages = [ thread_sort( grep { !$_->parent } @$pages ) ];
+    }
+    else {
+        $pages = [ sort { $a->{$order} cmp $b->{$order} } @$pages ];
 
-    if ( $self->order =~ /^reverse_/ ) {
-        $pages = [ reverse @$pages ];
+        if ( $self->order =~ /^reverse_/ ) {
+            $pages = [ reverse @$pages ];
+        }
     }
 
     $self->array($pages);

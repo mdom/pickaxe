@@ -135,9 +135,15 @@ sub delete ( $self, $title ) {
 sub pages ($self) {
     my $res = $self->get("wiki/index.json");
     for my $page ( @{ $res->json->{wiki_pages} } ) {
+        $page->{parent} = $page->{parent}->{title} // undef;
         my $page  = App::pickaxe::Page->new($page)->api($self);
         my $title = $page->title;
         $self->cache->{$title}->[ $page->version ] = $page;
+    }
+    for my $page ( map { $_->[-1] } values $self->cache->%* ) {
+        if ( $page->parent ) {
+            push @{ $self->cache->{ $page->parent }->[-1]->childs }, $page;
+        }
     }
     return [ map { $_->[-1] } values $self->cache->%* ];
 }

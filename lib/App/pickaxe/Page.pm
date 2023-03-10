@@ -10,6 +10,7 @@ has 'created_on';
 has 'updated_on';
 has 'parent';
 has 'api';
+has childs => sub { [] };
 
 has extended => sub ($self) {
     my $version = $self->version;
@@ -31,6 +32,16 @@ sub parent_page ($self) {
     $self->parent
       ? $self->api->page( $self->parent->{title}, -1 )
       : undef;
+}
+
+sub level ($self) {
+    my $i      = 0;
+    my $parent = $self->parent;
+    while ($parent) {
+        $i++;
+        $parent = $self->api->page( $parent, -1 )->parent;
+    }
+    return $i;
 }
 
 sub comments    { shift->extended->comments }
