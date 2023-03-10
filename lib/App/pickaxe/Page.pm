@@ -8,6 +8,7 @@ has 'title';
 has 'version';
 has 'created_on';
 has 'updated_on';
+has 'parent';
 has 'api';
 
 has extended => sub ($self) {
@@ -26,7 +27,12 @@ has extended => sub ($self) {
     return App::pickaxe::Page::Extended->new;
 };
 
-sub parent      { shift->extended->parent }
+sub parent_page ($self) {
+    $self->parent
+      ? $self->api->page( $self->parent->{title}, -1 )
+      : undef;
+}
+
 sub comments    { shift->extended->comments }
 sub author      { shift->extended->author }
 sub text        { shift->extended->text }
@@ -100,11 +106,21 @@ has rendered_text => sub ($self) {
 
 };
 
+has level => sub ($self) {
+    my $i = 0;
+    my $page = $self->parent_page;
+    while ( defined $page ) {
+        $i++;
+        $page = $page->parent_page;
+    }
+    return $i;
+};
+
 1;
 
 package App::pickaxe::Page::Extended;
 use Mojo::Base -base;
-has [qw(parent comments author text attachments)];
+has [qw(comments author text attachments)];
 1;
 
 package App::pickaxe::Page::Attachment;

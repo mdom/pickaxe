@@ -57,6 +57,7 @@ sub regenerate_index ($self) {
         format     => $self->config->index_format,
         identifier => {
             t => sub { $_[0]->title =~ s/_/ /gr },
+            l => sub { ' ' x $_[0]->level },
             u => sub { $self->format_time( $_[0]->updated_on ) },
             c => sub { $self->format_time( $_[0]->created_on ) },
             v => sub { $_[0]->version },
