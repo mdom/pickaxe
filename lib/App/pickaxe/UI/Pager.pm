@@ -2,6 +2,8 @@ package App::pickaxe::UI::Pager;
 use Mojo::Base -signatures, App::pickaxe::UI::Base;
 use Curses;
 
+has helpbar => 'q:Quit ?:Help';
+
 sub keybindings ($self) {
     return {
         'q'           => 'quit',

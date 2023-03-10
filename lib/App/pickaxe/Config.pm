@@ -74,6 +74,7 @@ has index_format      => '%4n %-22u %t';
 has attach_format     => '%4n %f %>  [%t %5s]';
 has project_format    => '%4n %p';
 has link_format       => '%4n %l';
+has diff_pager_format => 'pickaxe: Diff %t --- rev %v by %a +++ rev %V by %A';
 
 sub new ($class) {
     my $file = ( $ENV{XDG_CONFIG_HOME} || "$ENV{HOME}/.config" )

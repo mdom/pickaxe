@@ -10,6 +10,7 @@ use Mojo::Util 'decode', 'encode';
 
 use App::pickaxe::Api;
 use App::pickaxe::AttachmentMenu;
+use App::pickaxe::DiffPager;
 use App::pickaxe::Getline 'getline';
 use App::pickaxe::LinkBrowser;
 use App::pickaxe::SelectOption 'select_option', 'askyesno';
@@ -314,16 +315,19 @@ sub diff_page ( $self, $old_version, $new_version ) {
         $self->message('No previous version to diff against');
         return;
     }
-    my $old_text = $self->api->page( $title, $old_version )->rendered_text;
-    my $new_text = $self->api->page( $title, $new_version )->rendered_text;
+    my $old_page = $self->api->page( $title, $old_version );
+    my $new_page = $self->api->page( $title, $new_version );
 
-    my $diff = diff( $old_text, $new_text );
+    my $diff = diff( $old_page->rendered_text, $new_page->rendered_text );
     if ( !$diff ) {
         $self->message("No text changed between $old_version and $new_version");
         return;
     }
-    App::pickaxe::UI::Pager->new->set_text($diff)
-      ->run( $self->config->keybindings );
+    App::pickaxe::DiffPager->new(
+        old_page => $old_page,
+        new_page => $new_page,
+        config   => $self->config,
+    )->set_text($diff)->run( $self->config->keybindings );
     return;
 }
 
