@@ -12,6 +12,10 @@ sub sort ( $self, $order ) {
     $self->set( $self->array );
 }
 
+sub resort ($self) {
+    $self->set( $self->array );
+}
+
 sub switch_to ( $self, $elt ) {
     return if !$elt;
     for ( my $i = 0 ; $i < @{ $self->array } ; $i++ ) {
@@ -46,8 +50,7 @@ sub replace_current ( $self, $page ) {
 }
 
 sub thread_sort (@pages) {
-    map { $_, thread_sort( $_->childs->@* ) }
-      sort { $a->title cmp $b->title } @pages;
+    map { $_, thread_sort( $_->childs->@* ) } @pages;
 }
 
 sub set ( $self, $pages ) {
@@ -58,11 +61,16 @@ sub set ( $self, $pages ) {
 
     if ( $self->threaded ) {
         ## recompute all childs before threading
-        $_->childs([]) for @$pages;
+        $_->childs( [] ) for @$pages;
         my %pages = map { $_->title => $_ } @$pages;
-        for my $page ( @$pages ) {
-            if ($page->parent ) {
-                push @{ $pages{ $page->parent }->childs}, $page;
+        for my $page (@$pages) {
+            if ( $page->parent ) {
+                push @{ $pages{ $page->parent }->childs }, $page;
+            }
+        }
+        for my $page (@$pages) {
+            if ( my @childs = @{ $page->childs } ) {
+                $page->childs( [ sort { $a->title cmp $b->title } @childs ] );
             }
         }
         $pages = [ thread_sort( grep { !$_->parent } @$pages ) ];

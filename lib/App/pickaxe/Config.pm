@@ -43,6 +43,7 @@ has keybindings => sub {
             f          => 'follow_links',
             s          => 'search',
             '<Return>' => 'view_page',
+            '%'        => 'toggle_threading',
             '?'        => 'display_help',
         },
         pager => {

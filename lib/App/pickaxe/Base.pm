@@ -72,20 +72,26 @@ my %sort_options = (
     title   => 'title',
 );
 
-sub sort_pages ( $self, $order ) {    # hook
-    $self->pages->sort($order);
-}
-
 sub set_reverse_order ( $self, $key ) {
     if ( my $order = select_option( 'Rev-Sort', qw(Updated Created Title) ) ) {
-        $self->sort_pages("reverse_$sort_options{$order}");
+        $self->pages->sort("reverse_$sort_options{$order}");
     }
 }
 
 sub set_order ( $self, $key ) {
     if ( my $order = select_option( 'Sort', qw(Updated Created Title) ) ) {
-        $self->sort_pages( $sort_options{$order} );
+        $self->pages->sort( $sort_options{$order} );
     }
+}
+
+sub toggle_threading ( $self, $key ) {
+    if ( $self->pages->threaded ) {
+        $self->pages->threaded(0);
+    }
+    else {
+        $self->pages->threaded(1);
+    }
+    $self->pages->resort;
 }
 
 sub query_connection_details ($self) {
