@@ -56,16 +56,17 @@ sub regenerate_index ($self) {
     my $fmt = App::pickaxe::Format->new(
         format     => $self->config->index_format,
         identifier => {
-            t => sub { $_[0]->title =~ s/_/ /gr },
-            l => sub {
-                return '' if !$self->pages->threaded;
+            t => sub {
+                my $title = $_[0]->title =~ s/_/ /gr;
+                return $title if !$self->pages->threaded;
+
                 my $level = $_[0]->level;
-                if ( $level == 0 ) {
-                    return '';
-                }
+                return $title if !$level;
+
                 my $last = $_[0]->api->page( $_[0]->parent, -1 )->childs->[-1];
                 my $char = $_[0] == $last ? "\x{2514}" : "\x{251C}";
-                return ( "\x{2502} " x ( $level - 1 ) ) . "$char\x{2500}> ";
+                return ( "\x{2502} " x ( $level - 1 ) )
+                  . "$char\x{2500}> $title";
             },
             u => sub { $self->format_time( $_[0]->updated_on ) },
             c => sub { $self->format_time( $_[0]->created_on ) },
