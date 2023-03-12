@@ -18,6 +18,29 @@ sub diff_page ( $self, $key ) {
     $self->next::method( $version - 1, $version );
 }
 
+sub next_heading ( $self, $key, $direction = 1 ) {
+    my @lines = @{ $self->lines };
+    my $pos   = $self->current_line;
+
+    my @indexes =
+      $direction == 1
+      ? ( $pos + 1 .. @lines - 1 )
+      : ( reverse( 0 .. $pos - 1 ) );
+
+    for my $index (@indexes) {
+        if ( $lines[$index] =~ /^h\d\./ ) {
+            $self->goto_line($index);
+            return;
+        }
+    }
+    $self->message("No heading found.");
+    return;
+}
+
+sub prev_heading ( $self, $key ) {
+    $self->next_heading( $key, -1 );
+}
+
 sub statusbar ($self) {
     my $base = $self->api->base_url->clone->query( key => undef );
     my $page = $self->api->page( $self->pages->current->title, $self->version );

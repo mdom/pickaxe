@@ -67,6 +67,8 @@ has keybindings => sub {
             ']' => 'next_version',
             '{' => 'first_version',
             '}' => 'latest_version',
+            '(' => 'prev_heading',
+            ')' => 'next_heading',
         }
     };
 };
