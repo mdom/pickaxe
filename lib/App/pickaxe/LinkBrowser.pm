@@ -5,6 +5,7 @@ has [ 'links', 'api', 'config' ];
 
 has helpbar   => "q:Quit";
 has statusbar => "pickaxe: Link Browser";
+has moniker   => 'links';
 
 sub follow_link ( $self, $key ) {
     my $link = $self->links->[ $self->current_line ];

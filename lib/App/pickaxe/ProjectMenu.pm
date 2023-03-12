@@ -9,6 +9,7 @@ has 'selected_project';
 has helpbar   => "q:Quit <Return>:Select";
 has statusbar => "pickaxe: Projects";
 has projects  => sub { shift->api->projects };
+has moniker   => 'projects';
 
 sub select_project ( $self, $key ) {
     $self->selected_project( $self->projects->[ $self->current_line ] );

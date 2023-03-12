@@ -103,9 +103,9 @@ for the bind command is as follows:
 
 =over 4
 
-=item I<map>: This is the name of the keymap that the user wishes
-to modify. pickaxe has these keymaps: pager, index, link_browser,
-attachment_menu and project_menu.
+=item I<map>: This is the name of the keymap that the user wishes to
+modify. pickaxe has these keymaps: pager, index, links, attachments and
+projects.
 
 =item I<key>: This is the key or key combination that the user wants to
 bind to the specified function.

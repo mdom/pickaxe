@@ -14,13 +14,13 @@ has pass_cmd    => sub { [] };
 has yank_cmd    => sub { ['xclip'] };
 has keybindings => sub {
     return {
-        project_menu => {
+        projects => {
             '<Return>' => 'select_project',
         },
-        link_browser => {
+        links => {
             '<Return>' => 'follow_link',
         },
-        attachment_menu => {
+        attachments => {
             's'        => 'save_attachment',
             '<Return>' => 'view_attachment',
             a          => 'add_attachment',

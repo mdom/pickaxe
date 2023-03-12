@@ -10,6 +10,7 @@ use App::pickaxe::SelectOption 'askyesno';
 has helpbar     => "q:Quit s:Save <Ret>:View a:Add D:Delete";
 has statusbar   => "pickaxe: Attachments";
 has attachments => sub { [] };
+has moniker     => 'attachments';
 has 'api';
 has 'config';
 has 'pages';
