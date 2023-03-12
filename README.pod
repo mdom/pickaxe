@@ -192,7 +192,7 @@ command or configure the configuration variable I<yank_cmd> to use their
 clipboard manager.
 
 =back
-￼
+
 =head1 ENVIRONMENT
 
 =over 4
