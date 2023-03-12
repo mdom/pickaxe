@@ -44,6 +44,7 @@ has keybindings => sub {
             s          => 'search',
             '<Return>' => 'view_page',
             '%'        => 'toggle_threading',
+            '$'        => 'sync_pages',
             '?'        => 'display_help',
         },
         pager => {
