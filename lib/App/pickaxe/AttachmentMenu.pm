@@ -16,6 +16,7 @@ has 'config';
 has 'pages';
 
 sub save_attachment ( $self, $key ) {
+    return if !$self->attachments->@*;
     my $attachment = $self->attachments->[ $self->current_line ];
     my $path       = Mojo::URL->new( $attachment->content_url )->path;
     my $file = getline( "Save to file: ", { buffer => $attachment->filename } );
@@ -35,6 +36,7 @@ sub add_attachment ( $self, $key ) {
 }
 
 sub delete_attachment ( $self, $key ) {
+    return if !$self->attachments->@*;
     if ( !askyesno("Delete attachment?") ) {
         return;
     }
@@ -56,7 +58,7 @@ sub current_attachment ($self) {
 }
 
 sub view_attachment ( $self, $key ) {
-    return if !@{ $self->attachments };
+    return if !$self->attachments->@*;
     my $file = tempfile;
     my $path = Mojo::URL->new( $self->current_attachment->content_url )->path;
     $self->api->get($path)->save_to( $file->to_string );
