@@ -1,9 +1,6 @@
 #!/usr/bin/perl
 
-# TODO threaded with parents in index?
-
 use Mojo::Base -strict, -signatures;
-use Mojo::UserAgent;
 use App::pickaxe::Index;
 use App::pickaxe::Config;
 
@@ -57,14 +54,35 @@ pickaxe - the redmine wiki editor
 
 =head1 DESCRIPTION
 
-Pickaxe is a terminal based programm to view and edit redmine wiki
+Pickaxe is a ncurses based programm to view and edit redmine wiki
 pages.
 
 When you start pickaxe your are prompted for your username and passwort
 if those are not set in the configuration file. The index is the
 first screen you see. It is a list of alle wiki pages in your current
-project. You can use the I<Return> to view a wiki page in the pager
+project. You can use I<Return> to view a wiki page in the pager screen.
+
+To edit a page, press the e key while in the index or pager screen. This
+will open the page in an editor, where you can make changes to the page
+text.
+
+You can also search for pages by pressing the s key while in the index
+screen. This will prompt you for a search term. Type in the term you
+want to search for, and pickaxe will display a list of all pages that
+match the search term.
+
+In pickaxe, you can press the c key while in the index screen to enter
+the project switcher. This will display a list of all the projects you
+have access to. You can use the arrow keys to navigate the list, press
+Enter to select a project, or press q to cancel and return to the index
 screen.
+
+After selecting a project, the index screen will display the list of
+wiki pages for that project. From there, you can use the same navigation
+and editing commands as described earlier.
+
+To exit pickaxe, press the q key while in the index screen. This will
+bring you back to the command prompt.
 
 =head1 CONFIGURATION
 
