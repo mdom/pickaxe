@@ -103,16 +103,21 @@ for the bind command is as follows:
 
 =over 4
 
-=item I<map>: This is the name of the keymap that the user wishes to
-modify. pickaxe has these keymaps: pager, index, links, attachments and
-projects.
+=item I<map>
 
-=item I<key>: This is the key or key combination that the user wants to
-bind to the specified function.
+This is the name of the keymap that the user wishes to modify. pickaxe
+has these keymaps: pager, index, links, attachments and projects.
 
-=item I<function>: This is the name of the function that the user wants
-to bind to the specified key or key combination. See FUNCTIONS for a
-list of available functions.
+=item I<key>
+
+This is the key or key combination that the user wants to bind to the
+specified function.
+
+=item I<function>
+
+This is the name of the function that the user wants to bind to the
+specified key or key combination. See FUNCTIONS for a list of available
+functions.
 
 =back
 
@@ -229,6 +234,8 @@ paste it into other applications.
 Note: This function requires that the user has installed the xclip
 command or configure the configuration variable I<yank_cmd> to use their
 clipboard manager.
+
+=back
 ￼
 =head1 ENVIRONMENT
 
