@@ -49,19 +49,18 @@ sub set_lines ( $self, @lines ) {
 }
 
 sub update_helpbar ($self) {
-    my $help = substr( $self->helpbar || '', 0, $COLS );
+    my $help = substr( $self->helpbar, 0, $COLS );
     attron(A_REVERSE);
     addstring( 0, 0, ' ' x $COLS );
-    addstring( 0, 0, $self->helpbar );
+    addstring( 0, 0, $help );
     attroff(A_REVERSE);
 }
 
 sub update_statusbar ($self) {
-    my ($left) = $self->statusbar;
-    $left = substr( $left || '', 0, $COLS );
+    my $status = substr( $self->statusbar, 0, $COLS );
     attron(A_REVERSE);
     addstring( $LINES - 2, 0, ' ' x $COLS );
-    addstring( $LINES - 2, 0, $left );
+    addstring( $LINES - 2, 0, $status );
     attroff(A_REVERSE);
 }
 
