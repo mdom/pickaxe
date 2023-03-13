@@ -28,6 +28,10 @@ has base_url => sub ($self) {
     return $self->url;
 };
 
+has safe_base_url => sub ($self) {
+    $self->base_url->clone->query( key => undef );
+};
+
 has ua    => sub { Mojo::UserAgent->new };
 has cache => sub { {} };
 

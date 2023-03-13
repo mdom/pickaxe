@@ -8,7 +8,6 @@ use App::pickaxe::Format;
 use App::pickaxe::SelectOption 'askyesno';
 
 has helpbar     => "q:Quit s:Save <Ret>:View a:Add D:Delete";
-has statusbar   => "pickaxe: Attachments";
 has attachments => sub { [] };
 has moniker     => 'attachments';
 has 'api';
@@ -68,16 +67,6 @@ sub view_attachment ( $self, $key ) {
 }
 
 sub run ( $self, $bindings ) {
-    my $fmt = App::pickaxe::Format->new(
-        format     => $self->config->attach_format,
-        identifier => {
-            f => sub { $_[0]->filename },
-            t => sub { $_[0]->content_type || 'application/octetstream' },
-            s => sub { format_size( $_[0]->filesize || 0 ) },
-            n => sub { state $i = 1; $i++ },
-        },
-    );
-
     $self->on( resize => sub { $self->update_lines } );
     $self->update_lines;
     $self->next::method($bindings);
@@ -85,7 +74,7 @@ sub run ( $self, $bindings ) {
 
 sub update_lines ($self) {
     my $fmt = App::pickaxe::Format->new(
-        format     => $self->config->attach_format,
+        format     => $self->config->attachments_format,
         identifier => {
             f => sub { $_[0]->filename },
             t => sub { $_[0]->content_type || 'application/octetstream' },
@@ -107,6 +96,17 @@ sub format_size ($size) {
     }
 
     return sprintf( "%.0f%s", $size, $units->[$exp] );
+}
+
+sub statusbar ($self) {
+    my $fmt = App::pickaxe::Format->new(
+        format     => $self->config->attachments_status_format,
+        identifier => {
+            n => sub { scalar $_[0]->attachments->@* },
+            t => sub { $_[0]->pages->current->title },
+        },
+    );
+    return $fmt->printf($self);
 }
 
 1;

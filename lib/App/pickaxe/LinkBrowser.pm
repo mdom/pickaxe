@@ -1,11 +1,10 @@
 package App::pickaxe::LinkBrowser;
 use Mojo::Base 'App::pickaxe::UI::Index', -signatures;
 
-has [ 'links', 'api', 'config' ];
+has [ 'links', 'api', 'config', 'page' ];
 
-has helpbar   => "q:Quit";
-has statusbar => "pickaxe: Link Browser";
-has moniker   => 'links';
+has helpbar => "q:Quit";
+has moniker => 'links';
 
 sub follow_link ( $self, $key ) {
     my $link = $self->links->[ $self->current_line ];
@@ -33,9 +32,20 @@ sub run ($self) {
     $self->next::method( $self->config->keybindings );
 }
 
+sub statusbar ($self) {
+    my $fmt = App::pickaxe::Format->new(
+        format     => $self->config->links_status_format,
+        identifier => {
+            n => sub { scalar $_[0]->links->@* },
+            t => sub { $_[0]->page->title },
+        },
+    );
+    return $fmt->printf($self);
+}
+
 sub update_lines ($self) {
     my $fmt = App::pickaxe::Format->new(
-        format     => $self->config->link_format,
+        format     => $self->config->links_format,
         identifier => {
             l => sub { $_[0] },
             n => sub { state $i = 1; $i++ },

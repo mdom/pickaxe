@@ -73,14 +73,18 @@ has keybindings => sub {
     };
 };
 
-has index_format      => '%4n %-22{%Y-%m-%d %H:%M:%S}u %t';
-has attach_format     => '%4n %f %>  [%t %5s]';
-has project_format    => '%4n %p';
-has link_format       => '%4n %l';
-has diff_pager_format => 'pickaxe: Diff %t --- rev %v by %a +++ rev %V by %A';
+has index_format       => '%4n %-22{%Y-%m-%d %H:%M:%S}u %t';
+has attachments_format => '%4n %f %>  [%t %5s]';
+has projects_format    => '%4n %p';
+has links_format       => '%4n %l';
+has diff_pager_format  => 'pickaxe: Diff %t --- rev %v by %a +++ rev %V by %A';
 
 has index_status_format => 'pickaxe: %b [Pages:%n] (%o)';
 has pager_status_format => 'pickaxe: %b %t rev %v by %a %> --%3p%%';
+has links_status_format => 'pickaxe: Links for %t [Links: %n]';
+has attachments_status_format =>
+  'pickaxe: Attachments for %t [Attachments: %n]';
+has projects_status_format => 'pickaxe: Projects on %b [Projects: %n]';
 
 sub new ($class) {
     my $file = ( $ENV{XDG_CONFIG_HOME} || "$ENV{HOME}/.config" )

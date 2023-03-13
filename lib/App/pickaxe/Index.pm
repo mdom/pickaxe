@@ -17,15 +17,9 @@ sub statusbar ($self) {
     my $fmt = App::pickaxe::Format->new(
         format     => $self->config->index_status_format,
         identifier => {
-            b => sub {
-                $_[0]->api->base_url->clone->query( key => undef );
-            },
-            n => sub {
-                scalar $_[0]->pages->each;
-            },
-            o => sub {
-                scalar $_[0]->pages->order;
-            },
+            b => sub { $_[0]->api->safe_base_url; },
+            n => sub { scalar $_[0]->pages->each; },
+            o => sub { scalar $_[0]->pages->order; },
         }
     );
     return $fmt->printf($self);

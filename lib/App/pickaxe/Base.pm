@@ -50,6 +50,7 @@ sub follow_links ( $self, $key ) {
     }
 
     my $browser = App::pickaxe::LinkBrowser->new(
+        page   => $self->pages->current,
         api    => $self->api,
         config => $self->config,
         links  => \@links,
