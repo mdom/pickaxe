@@ -32,16 +32,19 @@ sub diff_page ( $self, $key ) {
 
 sub view_page ( $self, $key ) {
     return if $self->empty;
-    $self->pages->unsubscribe('changed');
+
+    # $self->pages->unsubscribe('changed');
     App::pickaxe::Pager->new(
         config => $self->config,
         pages  => $self->pages,
-        api    => $self->api
+        api    => $self->api,
+        index  => $self,
     )->run;
     ## pages could be changed, so we regenerate the index
     $self->regenerate_index;
     $self->current_line( $self->pages->index );
-    $self->pages->on( changed => sub { $self->regenerate_index } );
+
+    # $self->pages->on( changed => sub { $self->regenerate_index } );
     $self->render;
 }
 

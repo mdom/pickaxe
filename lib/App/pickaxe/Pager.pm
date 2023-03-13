@@ -1,9 +1,13 @@
 package App::pickaxe::Pager;
 use Mojo::Base -signatures, 'App::pickaxe::Base', 'App::pickaxe::UI::Pager';
+use Curses;
 
 has helpbar => "q:Quit e:Edit /:Find o:Open y:Yank D:Delete ?:Help";
 has 'old_page';
 has 'version';
+has 'index';
+has 'context_lines' => 0;
+sub y_offset ($self) { $self->context_lines + 1 };
 
 sub next_item ( $self, $key ) {
     $self->pages->next;
@@ -69,6 +73,19 @@ sub render ($self) {
         $self->set_text( $page->rendered_text );
     }
     $self->next::method;
+    if ( $self->context_lines ) {
+        my $first = int( $self->pages->index / $self->context_lines ) * $self->context_lines;;
+        my $last = $first + $self->context_lines - 1;
+        my $y = 1;
+        my @context_lines = @{$self->index->lines}[$first .. $last ];
+        for my $line ( @context_lines ) {
+            addstring( $y++, 0, $line );
+        }
+        my $status = substr( $self->index->statusbar, 0, $COLS);
+        addstring($y,0, $status);
+        chgat( $y, 0, -1, A_REVERSE, 0, 0 );
+        chgat( ($self->pages->index % $self->context_lines ) +1, 0, -1, A_REVERSE, 0, 0 );
+    }
 }
 
 sub run ($self) {

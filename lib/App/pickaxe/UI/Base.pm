@@ -15,6 +15,8 @@ has ncolumns       => 0;
 has current_line   => 0;
 has current_column => 0;
 
+has y_offset => 0;
+
 has find_active => 0;
 
 has moniker => sub ($self) {
@@ -26,7 +28,7 @@ has moniker => sub ($self) {
 has statusbar => '';
 has helpbar   => '';
 
-sub maxlines { $LINES - 3 }
+sub maxlines { $LINES - 3 - $_[0]->y_offset }
 
 sub first_line_on_page ($self) {
     return $self->current_line;
@@ -78,7 +80,7 @@ sub render ($self) {
         $last_line = $self->nlines - 1;
     }
 
-    my $x = 0;
+    my $y = $self->y_offset;
     for my $line ( @{ $self->lines }[ $first_line .. $last_line ] ) {
         my $substr;
         if ( $self->current_column <= length($line) ) {
@@ -88,8 +90,8 @@ sub render ($self) {
         else {
             $substr = '';
         }
-        addstring( $x + 1, 0, $substr );
-        $x++;
+        addstring( $y + 1, 0, $substr );
+        $y++;
     }
 
 }
