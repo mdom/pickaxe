@@ -10,8 +10,6 @@ use App::pickaxe::ProjectMenu;
 
 use Curses;
 
-use POSIX 'strftime';
-
 has helpbar =>
   "q:Quit a:Add e:Edit s:Search /:Find b:Browse o:Order D:Delete ?:Help";
 
@@ -23,18 +21,6 @@ sub statusbar ($self) {
 sub diff_page ( $self, $key ) {
     my $version = $self->pages->current->version;
     $self->next::method( $version - 1, $version );
-}
-
-sub format_time ( $self, $time ) {
-    my $strftime_fmt = $self->config->index_time_format;
-    my $redmine_fmt  = '%Y-%m-%dT%H:%M:%SZ';
-
-    # return gmtime->strptime( $time, $redmine_fmt )->strftime($strftime_fmt);
-    ## This is a microoptimation of the above statement.
-    my ( $year, $mon, $mday, $hour, $min, $sec ) = split( /[:TZ-]/, $time );
-    $mon  -= 1;
-    $year -= 1900;
-    strftime( $strftime_fmt, $sec, $min, $hour, $mday, $mon, $year );
 }
 
 sub view_page ( $self, $key ) {
@@ -68,8 +54,8 @@ sub regenerate_index ($self) {
                 return ( "\x{2502} " x ( $level - 1 ) )
                   . "$char\x{2500}> $title";
             },
-            u => sub { $self->format_time( $_[0]->updated_on ) },
-            c => sub { $self->format_time( $_[0]->created_on ) },
+            u => sub { $_[0]->updated_on },
+            c => sub { $_[0]->created_on },
             v => sub { $_[0]->version },
             n => sub { state $i = 1; $i++ },
         },

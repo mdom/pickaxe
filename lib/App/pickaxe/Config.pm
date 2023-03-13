@@ -73,8 +73,7 @@ has keybindings => sub {
     };
 };
 
-has index_time_format => "%Y-%m-%d %H:%M:%S";
-has index_format      => '%4n %-22u %t';
+has index_format      => '%4n %-22{%Y-%m-%d %H:%M:%S}u %t';
 has attach_format     => '%4n %f %>  [%t %5s]';
 has project_format    => '%4n %p';
 has link_format       => '%4n %l';

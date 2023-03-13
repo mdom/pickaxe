@@ -1,10 +1,23 @@
 package App::pickaxe::Format;
 use Mojo::Base -base, -signatures;
 use Curses;
+use POSIX 'strftime';
 
 has identifier => sub { {} };
 has format     => '';
 has 'cols';
+
+sub format_time ( $time, $strftime_fmt ) {
+    my ( $year, $mon, $mday, $hour, $min, $sec ) =
+      $time =~ /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z$/;
+
+    ## The %{} syntax was used with something that wasn't a time
+    return $time if not defined $year;
+
+    $mon  -= 1;
+    $year -= 1900;
+    strftime( $strftime_fmt, $sec, $min, $hour, $mday, $mon, $year );
+}
 
 has _format => sub ($self) {
     my $format     = $self->format;
@@ -12,12 +25,19 @@ has _format => sub ($self) {
     my @subs;
 
     while ( $format !~ /\G$/gc ) {
-        if ( $format =~ /\G%(-?\d+(?:.\d)?)?([a-zA-Z])/gc ) {
-            my ( $mod, $format ) = ( $1, $2 );
+        if ( $format =~ /\G%(-?\d+(?:.\d)?)?(?:{(.*?)})?([a-zA-Z])/gc ) {
+            my ( $mod, $time_fmt, $format ) = ( $1, $2, $3 );
             $mod //= '';
-            if ( my $i = $self->identifier->{$format} ) {
+            if ( my $sub = $self->identifier->{$format} ) {
                 $printf_fmt .= "%${mod}s";
-                push @subs, $i;
+                if ($time_fmt) {
+                    push @subs, sub ($o) {
+                        format_time( $sub->($o), $time_fmt );
+                    };
+                }
+                else {
+                    push @subs, $sub;
+                }
             }
             else {
                 die "Unknown format specifier <$format>\n";
