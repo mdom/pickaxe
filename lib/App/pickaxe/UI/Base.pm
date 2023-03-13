@@ -57,13 +57,11 @@ sub update_helpbar ($self) {
 }
 
 sub update_statusbar ($self) {
-    my ( $left, $right ) = $self->statusbar;
-    $left  = substr( $left  || '', 0, $COLS );
-    $right = substr( $right || '', 0, $COLS - 1 );
+    my ($left) = $self->statusbar;
+    $left = substr( $left || '', 0, $COLS );
     attron(A_REVERSE);
-    addstring( $LINES - 2, 0,                         ' ' x $COLS );
-    addstring( $LINES - 2, 0,                         $left );
-    addstring( $LINES - 2, $COLS - length(" $right"), " $right" );
+    addstring( $LINES - 2, 0, ' ' x $COLS );
+    addstring( $LINES - 2, 0, $left );
     attroff(A_REVERSE);
 }
 

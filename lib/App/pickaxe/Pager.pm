@@ -42,20 +42,23 @@ sub prev_heading ( $self, $key ) {
 }
 
 sub statusbar ($self) {
-    my $base = $self->api->base_url->clone->query( key => undef );
     my $page = $self->api->page( $self->pages->current->title, $self->version );
-    my $title   = $page->title;
-    my $version = $page->version;
-    my $author  = $page->author->{name};
-    my $percent;
-    if ( $self->nlines == 0 ) {
-        $percent = '100';
-    }
-    else {
-        $percent = int( $self->current_line / $self->nlines * 100 );
-    }
-    return "pickaxe: $base $title rev $version by $author",
-      sprintf( "--%3d%%", $percent );
+    my $fmt  = App::pickaxe::Format->new(
+        format     => $self->config->pager_status_format,
+        identifier => {
+            a => sub { $page->author->{name} },
+            v => sub { $page->version },
+            t => sub { $page->title },
+            b => sub { $self->api->base_url->clone->query( key => undef ) },
+            p => sub {
+                if ( $self->nlines == 0 ) {
+                    return '100';
+                }
+                return int( $self->current_line / $self->nlines * 100 );
+            },
+        }
+    );
+    return $fmt->printf($self);
 }
 
 sub render ($self) {

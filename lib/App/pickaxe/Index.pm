@@ -14,8 +14,21 @@ has helpbar =>
   "q:Quit a:Add e:Edit s:Search /:Find b:Browse o:Order D:Delete ?:Help";
 
 sub statusbar ($self) {
-    my $base = $self->api->base_url->clone->query( key => undef );
-    return "pickaxe: $base";
+    my $fmt = App::pickaxe::Format->new(
+        format     => $self->config->index_status_format,
+        identifier => {
+            b => sub {
+                $_[0]->api->base_url->clone->query( key => undef );
+            },
+            n => sub {
+                scalar $_[0]->pages->each;
+            },
+            o => sub {
+                scalar $_[0]->pages->order;
+            },
+        }
+    );
+    return $fmt->printf($self);
 }
 
 sub diff_page ( $self, $key ) {

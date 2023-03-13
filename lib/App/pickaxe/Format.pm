@@ -49,6 +49,9 @@ has _format => sub ($self) {
         elsif ( $format =~ /\G([^%]+)/gc ) {
             $printf_fmt .= $1;
         }
+        elsif ( $format =~ /\G(%%)/gc ) {
+            $printf_fmt .= $1;
+        }
     }
     return [ $printf_fmt, @subs ];
 };

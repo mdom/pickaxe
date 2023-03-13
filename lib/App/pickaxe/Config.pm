@@ -79,6 +79,9 @@ has project_format    => '%4n %p';
 has link_format       => '%4n %l';
 has diff_pager_format => 'pickaxe: Diff %t --- rev %v by %a +++ rev %V by %A';
 
+has index_status_format => 'pickaxe: %b [Pages:%n] (%o)';
+has pager_status_format => 'pickaxe: %b %t rev %v by %a %> --%3p%%';
+
 sub new ($class) {
     my $file = ( $ENV{XDG_CONFIG_HOME} || "$ENV{HOME}/.config" )
       . "/pickaxe/pickaxe.conf";
