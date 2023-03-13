@@ -120,7 +120,12 @@ password. There is no default.
 
 =item base_url
 
-Specifies the base url of the redmine project you want to edit.
+Specifies the base url of the redmine project you want to work on.
+
+=item pager_index_lines
+
+Determines the number of lines of a mini-index which is shown when in
+the pager. The default value of 0 results in no index being shown.
 
 =item index_format
 

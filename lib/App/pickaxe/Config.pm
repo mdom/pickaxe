@@ -73,6 +73,8 @@ has keybindings => sub {
     };
 };
 
+has pager_index_lines => '0';
+
 has index_format       => '%4n %-22{%Y-%m-%d %H:%M:%S}u %t';
 has attachments_format => '%4n %f %>  [%t %5s]';
 has projects_format    => '%4n %p';
