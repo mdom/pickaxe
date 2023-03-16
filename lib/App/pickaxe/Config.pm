@@ -10,6 +10,7 @@ has 'password';
 has 'apikey';
 has 'base_url';
 
+has render_text => 1;
 has pass_cmd    => sub { [] };
 has yank_cmd    => sub { ['xclip'] };
 has keybindings => sub {
@@ -69,6 +70,7 @@ has keybindings => sub {
             '}' => 'latest_version',
             '(' => 'prev_heading',
             ')' => 'next_heading',
+            '=' => 'toggle_rendered',
         }
     };
 };

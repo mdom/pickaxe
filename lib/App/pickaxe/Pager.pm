@@ -64,12 +64,30 @@ sub statusbar ($self) {
     return $fmt->printf($self);
 }
 
+sub toggle_rendered ( $self, $key ) {
+    my $page = $self->pages->current;
+    if ( $self->config->render_text ) {
+        $self->config->render_text(0);
+        $self->set_text( $page->text );
+    }
+    else {
+        $self->config->render_text(1);
+        $self->set_text( $page->rendered_text );
+    }
+}
+
 sub render ($self) {
-    if ( ( $self->old_page || 0 ) != $self->pages->current ) {
+    if ( !defined $self->old_page || $self->old_page != $self->pages->current )
+    {
         $self->version( $self->pages->current->version );
         my $page = $self->pages->current;
         $self->old_page($page);
-        $self->set_text( $page->rendered_text );
+        if ( $self->config->render_text ) {
+            $self->set_text( $page->rendered_text );
+        }
+        else {
+            $self->set_text( $page->text );
+        }
     }
 
     $self->next::method;
