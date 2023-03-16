@@ -72,8 +72,8 @@ specified function.
 =item I<function>
 
 This is the name of the function that the user wants to bind to the
-specified key or key combination. See FUNCTIONS for a list of available
-functions.
+specified key or key combination. Press I<?> to see a list of valid
+functions for the current map.
 
 =back
 
@@ -161,36 +161,6 @@ The page version number.
 
 =back
 
-=head1 FUNCTIONS
-
-=over 4
-
-=item view_attachments
-
-This function allows the user to view any attachments that are
-associated with the current wiki page.
-
-To use this function, press the v key while viewing the desired wiki
-page. A list of all attachments associated with the page will be
-displayed, along with the filename, size, and mime type for each
-attachment.
-
-Note: This function requires that the current wiki page has one or
-more attachments associated with it. If there are no attachments, this
-function will do nothing.
-
-=item yank_url
-
-This function copies the URL for the current wiki page to the
-clipboard. This allows the user to easily share the URL with others or
-paste it into other applications.
-
-Note: This function requires that the user has installed the xclip
-command or configure the configuration variable I<yank_cmd> to use their
-clipboard manager.
-
-=back
-
 =head1 ENVIRONMENT
 
 =over 4
@@ -202,6 +172,33 @@ access it by clicking on your account on your redmine wiki and search
 for api key in the right margin.
 
 =back
+
+=head1 INSTALLATION
+
+If you have cpanminus installed, you can install pickaxe by simply
+calling:
+
+    $ cpanm .
+
+Or you can use:
+
+    $ perl Makefile.PL && make install
+
+But you don't have to install pickaxe to use it. You can just fullfull
+its dependencies (this example assumes you're running Debian but the
+packages have similar names in other distributions) and then run it from
+inside your checkout:
+
+    $ apt-get install libmojolicious-perl libcurses-perl libio-socket-ssl-perl
+    $ perl -Ilib bin/pickaxe
+
+Or you can use docker to run pickaxe:
+
+    $ docker build -t pickaxe .
+    $ docker run --net=host --rm -ti pickaxe
+
+Packaging instructions for NixOS and Debian are included in the source
+tree.
 
 =head1 COPYRIGHT AND LICENSE
 

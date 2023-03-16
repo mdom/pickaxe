@@ -217,6 +217,33 @@ for api key in the right margin.
 
 =back
 
+=head1 INSTALLATION
+
+If you have cpanminus installed, you can install pickaxe by simply
+calling:
+
+    $ cpanm .
+
+Or you can use:
+
+    $ perl Makefile.PL && make install
+
+But you don't have to install pickaxe to use it. You can just fullfull
+its dependencies (this example assumes you're running Debian but the
+packages have similar names in other distributions) and then run it from
+inside your checkout:
+
+    $ apt-get install libmojolicious-perl libcurses-perl libio-socket-ssl-perl
+    $ perl -Ilib bin/pickaxe
+
+Or you can use docker to run pickaxe:
+
+    $ docker build -t pickaxe .
+    $ docker run --net=host --rm -ti pickaxe
+
+Packaging instructions for NixOS and Debian are included in the source
+tree.
+
 =head1 COPYRIGHT AND LICENSE
 
 Copyright 2022 Mario Domgoergen C<< <mario@domgoergen.com> >>
