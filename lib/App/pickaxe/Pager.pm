@@ -6,7 +6,10 @@ has helpbar => "q:Quit e:Edit /:Find o:Open y:Yank D:Delete ?:Help";
 has 'old_page';
 has 'version';
 has 'index';
-sub y_offset ($self) { $self->config->pager_index_lines + 1 }
+
+sub y_offset ($self) {
+    $self->config->pager_index_lines ? $self->config->pager_index_lines + 1 : 0;
+}
 
 sub next_item ( $self, $key ) {
     $self->pages->next;
